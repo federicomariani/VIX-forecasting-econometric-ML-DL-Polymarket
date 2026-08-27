@@ -182,63 +182,6 @@ ranking = ranking.sort_values("Importanza_media", ascending=False)
 print("RANKING PERMUTATION IMPORTANCE (LSTM)")
 print(ranking)
 
-# Forward feature selection guidata dal ranking (stessa logica del Random Forest)
-ranked_features = ranking["Variabile"].tolist()
-feature_sizes = list(range(17, 4, -1))
-
-results_features = []
-
-for n in feature_sizes:
-    selected_features = ranked_features[:n]
-    idx_selected = [predittori.index(f) for f in selected_features]
-
-    lstm_sel = NeuralNetRegressor(
-        module=LSTMModel,
-        module__input_size=n,
-        module__hidden_size=10,
-        module__num_layers=2,
-        module__dropout=0.3,
-        optimizer__lr=0.001,
-        batch_size=32,
-        max_epochs=50,
-        **kwargs_comuni,
-    )
-    lstm_sel.fit(X_training_seq_fs[:, :, idx_selected], y_training_seq_fs)
-
-    y_pred_sel = lstm_sel.predict(X_validation_seq_fs[:, :, idx_selected])
-
-    rmse = np.sqrt(mean_squared_error(y_validation_seq_fs, y_pred_sel))
-    mae = mean_absolute_error(y_validation_seq_fs, y_pred_sel)
-    r2 = r2_score(y_validation_seq_fs, y_pred_sel)
-
-    results_features.append({
-        "Numero_feature": n,
-        "RMSE": rmse,
-        "MAE": mae,
-        "R2": r2,
-        "Features": selected_features,
-    })
-
-results_features = pd.DataFrame(results_features)
-
-print("FEATURES SELEZIONATE (LSTM, PERMUTATION IMPORTANCE)")
-print(results_features[["Numero_feature", "RMSE", "MAE", "R2"]])
-
-best_features = results_features.loc[results_features["RMSE"].idxmin(), "Features"]
-print("Feature selezionate:", best_features)
-
-predittori = list(best_features)  # da qui in avanti si usano solo le feature selezionate
-
-
-# -----------------------------------------------------
-# RI-COSTRUZIONE DEI DATASET SULLE FEATURE SELEZIONATE
-# -----------------------------------------------------
-X_training = dataset_h.loc[:"2019-12-31", predittori]
-X_validation = dataset_h.loc["2020-01-01":"2021-12-31", predittori]
-X_test = dataset_h.loc["2022-01-01":, predittori]
-
-X_train_validation = pd.concat([X_training, X_validation])
-
 
 # -------------------
 # SCALING DEFINITIVO
