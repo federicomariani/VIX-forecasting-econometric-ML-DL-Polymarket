@@ -18,7 +18,7 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
 
 
 # -----------------
@@ -30,6 +30,10 @@ orizzonte = 1
 # Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
 target_col = f"Close_VIX_h{orizzonte}"
 dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
+
+# La riga conserva la data delle feature; il target h-step appartiene invece alla data osservata h righe dopo. La conserviamo per etichettare correttamente previsioni e valori reali nei risultati del backtest
+target_date_col = f"Target_Date_h{orizzonte}"
+dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
 # Rimuovo le ultime righe che non hanno un target valido (fine serie)
 dataset_h = dataset.dropna(subset=[target_col])
@@ -77,7 +81,9 @@ model = XGBRegressor(
     n_estimators = 200,
     max_depth = 3,
     learning_rate = 0.1,
-    objective="reg:pseudohubererror"
+    objective="reg:pseudohubererror",
+    base_score=float(y_training.mean())
+
 )
 
 model.fit(X_training, y_training)
@@ -121,6 +127,7 @@ start_cross_validation = time.time()
 grid_search = GridSearchCV(
     estimator=XGBRegressor(
         objective="reg:pseudohubererror",
+        base_score=float(y_training.mean()),
         random_state=42
     ),
     param_grid=param_grid_cross_validation,
@@ -153,6 +160,7 @@ start_bayesian_optimization = time.time()
 bayesian_optimization = BayesSearchCV(
     estimator = XGBRegressor(
         objective = "reg:pseudohubererror",
+        base_score=float(y_training.mean()),
         random_state = 42
     ),
     search_spaces = search_spaces_bayesian_optimization,
@@ -177,6 +185,7 @@ print("Tempo di tuning di Bayesian Optimization:", tempo_bayesian_optimization)
 model_cv = XGBRegressor(
     **grid_search.best_params_,
     objective="reg:pseudohubererror",
+    base_score=float(y_training.mean()),
     random_state = 42
 )
 
@@ -202,6 +211,7 @@ print(importance_cv)
 model_bo = XGBRegressor(
     **best_iperparameters_bayesian_optimization,
     objective="reg:pseudohubererror",
+    base_score=float(y_training.mean()),
     random_state=42
 )
 
@@ -243,6 +253,7 @@ for n in feature_sizes_cv:
     model_sel_cv = XGBRegressor(
         **grid_search.best_params_,
         objective="reg:pseudohubererror",
+        base_score=float(y_training.mean()),
         random_state=42
     )
 
@@ -297,6 +308,7 @@ for n in feature_sizes_bo:
     model_sel_bo = XGBRegressor(
         **best_iperparameters_bayesian_optimization,
         objective="reg:pseudohubererror",
+        base_score=float(y_training.mean()),
         random_state=42
     )
 
@@ -342,6 +354,7 @@ print(best_features_bo)
 # Si riuniscono i tre dataset in maniera cronologica per poter effettuare quesa tipologia di backtest
 X_all = pd.concat([X_training, X_validation, X_test])
 y_all = pd.concat([y_training, y_validation, y_test])
+target_dates_all = dataset_h.loc[X_all.index, target_date_col]
 
 n_train = len(X_training)
 n_validation = len(X_validation)
@@ -367,28 +380,35 @@ for i in range(n_test):
     
     xgboost_cv_backtest = XGBRegressor(
         **best_iperparameters_cross_validation,
-         n_jobs=-1,
+        objective="reg:pseudohubererror",
+        base_score=float(y_training.mean()),
+        n_jobs=-1,
         random_state=42,
     )
     xgboost_cv_backtest.fit(train_window_X, train_window_y)
 
     pred_cv = xgboost_cv_backtest.predict(X_new)[0]
     y_predicted_list_cv.append(pred_cv)
-    dates_predicted_cv.append(X_all.index[target_idx])
+    dates_predicted_cv.append(target_dates_all.iloc[target_idx])
 
 # Riallineamento valori previsti y con date
 y_predicted_backtest_cv = pd.Series(y_predicted_list_cv, index=dates_predicted_cv, name="VIX_Forecasted")
-y_true_backtest_cv = y_all.loc[y_predicted_backtest_cv.index].rename("VIX_Reale")
+y_true_backtest_cv = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_cv,
+    name="VIX_Reale",
+)
 
 # Cartella comune dove tutti i file-modello salvano i risultati
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\0_Forecast"
+output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\2_XGBoost\Results"
 os.makedirs(output_dir, exist_ok=True)
 
 # Salvo previsioni + valori reali, per la variante Grid-Search per fare poi Model Confidence Set e Diebold-Mariano test
 df_out_cv = pd.DataFrame({
-    "y_true": y_true_backtest_cv,
-    "y_pred": y_predicted_backtest_cv
+    "Actual": y_true_backtest_cv,
+    "Forecast": y_predicted_backtest_cv
 })
+df_out_cv.index.name = "Date"
 df_out_cv.to_csv(os.path.join(output_dir, f"xgboost_gridsearch_h{orizzonte}.csv"))
 
 
@@ -435,24 +455,31 @@ for i in range(n_test):
     
     xgboost_bo_backtest = XGBRegressor(
         **bayesian_optimization.best_params_,
-         n_jobs=-1,
+        objective="reg:pseudohubererror",
+        base_score=float(y_training.mean()),
+        n_jobs=-1,
         random_state=42,
     )
     xgboost_bo_backtest.fit(train_window_X, train_window_y)
 
     pred_bo = xgboost_bo_backtest.predict(X_new)[0]
     y_predicted_list_bo.append(pred_bo)
-    dates_predicted_bo.append(X_all.index[target_idx])
+    dates_predicted_bo.append(target_dates_all.iloc[target_idx])
 
 # Riallineamento valori previsti y con date
 y_predicted_backtest_bo = pd.Series(y_predicted_list_bo, index=dates_predicted_bo, name="VIX_Forecasted")
-y_true_backtest_bo = y_all.loc[y_predicted_backtest_bo.index].rename("VIX_Reale")
+y_true_backtest_bo = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_bo,
+    name="VIX_Reale",
+)
 
 # Salvo previsioni + valori reali, per la variante Bayesian Optimization
 df_out_bo = pd.DataFrame({
-    "y_true": y_true_backtest_bo,
-    "y_pred": y_predicted_backtest_bo
+    "Actual": y_true_backtest_bo,
+    "Forecast": y_predicted_backtest_bo
 })
+df_out_bo.index.name = "Date"
 df_out_bo.to_csv(os.path.join(output_dir, f"xgboost_bayesoptimization_h{orizzonte}.csv"))
 
 
@@ -481,6 +508,9 @@ print(f"Directional Accuracy: {directional_accuracy_bo:.2f}%")
 # -------------------------------------
 # GRAFICI: VIX REALE vs VIX FORECASTED  
 # -------------------------------------
+output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\2_XGBoost\Results"
+os.makedirs(output_dir_grafici, exist_ok=True)
+
 # Grafico con ottimizzazione Grid-Search CV
 # Riportare l'indice in formato datetime (per asse delle x leggibile) 
 y_true_backtest_cv.index = pd.to_datetime(y_true_backtest_cv.index)
@@ -500,7 +530,7 @@ ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_CV_vix_reale_vs_previsto_h{orizzonte}.png", dpi=300, bbox_inches="tight")
+plt.savefig(os.path.join(output_dir_grafici, f"xgboost_CV_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -523,5 +553,5 @@ ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_BO_vix_reale_vs_previsto_h{orizzonte}.png", dpi=300, bbox_inches="tight")
+plt.savefig(os.path.join(output_dir_grafici, f"xgboost_BO_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
 plt.show()

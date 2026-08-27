@@ -29,7 +29,7 @@ device = "cpu"
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\0. Dataset\df_finale.csv", index_col=["Date"])
+dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\dataset_w_polymarket.csv", index_col=["Date"])
 
 
 # -----------------
@@ -53,6 +53,10 @@ lookback = 20  # lunghezza della finestra di input
 target_col = f"Close_VIX_h{orizzonte}"
 dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
 
+# La riga conserva la data delle feature; il target h-step appartiene invece alla data osservata h righe dopo. Manteniamo esplicitamente entrambe le date per evitare di salvare il VIX reale sulla data delle feature
+target_date_col = f"Target_Date_h{orizzonte}"
+dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
+
 # Rimuovo le ultime righe che non hanno un target valido (fine serie)
 dataset_h = dataset.dropna(subset=[target_col])
 
@@ -68,8 +72,8 @@ predittori_w_pm = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_
               "Credit_Spread", "Log_Return_Gold", "Weekday", "cut_50", "cut_25", "hold", "hike_25",
               "expected_rate_change_fomc", "rate_uncertainty_fomc", "probability_cut_fomc", 
               "probability_hike_fomc", "entropy_fomc", "us_recession", "entropy_us_recession",
-              "change_1d_us_recession", "change_5d_us_recession", "cpi_<=2.7", "cpi_2.8",
-              "cpi_2.9", "cpi_>=3.0", "expected_cpi", "uncertainty_cpi", "entropy_cpi"] # predittori with polymarket features
+              "change_1d_us_recession", "change_5d_us_recession", "cpi_max_2_7", "cpi_2_8",
+              "cpi_2_9", "cpi_min_3_0", "expected_cpi", "uncertainty_cpi", "entropy_cpi"] # predittori with polymarket features
 
 target = [target_col]
 
@@ -78,8 +82,8 @@ target = [target_col]
 # DATA MANIPULATION
 # ------------------
 # Split cronologico. Cambiare predittori in predittori_w_pm e viceversa quando si vogliono utilizzare le features di Polymarket
-X_training = dataset_h.loc[:"2025-12-30", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
-y_training = dataset_h.loc[:"2025-12-30", target].squeeze()
+X_training = dataset_h.loc[:"2025-11-30", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_training = dataset_h.loc[:"2025-11-30", target].squeeze()
 
 X_validation = dataset_h.loc["2025-12-01":"2026-01-31", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
 y_validation = dataset_h.loc["2025-12-01":"2026-01-31", target].squeeze()
@@ -309,6 +313,7 @@ print("TEMPO DI TUNING BAYESIAN OPTIMIZATION:", tempo_bayesian_optimization)
 # ------------------------------------------------------------------
 X_all = pd.concat([X_training, X_validation, X_test])
 y_all = pd.concat([y_training, y_validation, y_test])
+target_dates_all = dataset_h.loc[X_all.index, target_date_col]
 
 X_all_scaled = scaler_X.transform(X_all)
 y_all_scaled = scaler_y.transform(y_all.values.reshape(-1, 1)).ravel()
@@ -358,20 +363,25 @@ for i in range(n_test):
     pred_cv = scaler_y.inverse_transform([[pred_scaled_cv]])[0][0]
 
     y_predicted_list_cv.append(pred_cv)
-    dates_predicted_cv.append(X_all.index[target_idx])
+    dates_predicted_cv.append(target_dates_all.iloc[target_idx])
 
 # Riallineamento valori previsti y con date
 y_predicted_backtest_cv = pd.Series(y_predicted_list_cv, index=dates_predicted_cv, name="VIX_Forecasted")
-y_true_backtest_cv = y_all.loc[y_predicted_backtest_cv.index].rename("VIX_Reale")
+y_true_backtest_cv = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_cv,
+    name="VIX_Reale",
+)
 
 # Cartella comune dove vengono salvati i risultati
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\1. LSTM\Results\0_Forecast"
+output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\1_LSTM\With_Polymarket\Results"
 os.makedirs(output_dir, exist_ok=True)
 
 df_out_cv = pd.DataFrame({
-    "y_true": y_true_backtest_cv,
-    "y_pred": y_predicted_backtest_cv
+    "Actual": y_true_backtest_cv,
+    "Forecast": y_predicted_backtest_cv
 })
+df_out_cv.index.name = "Date"
 df_out_cv.to_csv(os.path.join(output_dir, f"lstm_gridsearch_h{orizzonte}_{evento}.csv"))
 
 
@@ -436,15 +446,20 @@ for i in range(n_test):
     pred_bo = scaler_y.inverse_transform([[pred_scaled_bo]])[0][0]
 
     y_predicted_list_bo.append(pred_bo)
-    dates_predicted_bo.append(X_all.index[target_idx])
+    dates_predicted_bo.append(target_dates_all.iloc[target_idx])
 
 y_predicted_backtest_bo = pd.Series(y_predicted_list_bo, index=dates_predicted_bo, name="VIX_Forecasted")
-y_true_backtest_bo = y_all.loc[y_predicted_backtest_bo.index].rename("VIX_Reale")
+y_true_backtest_bo = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_bo,
+    name="VIX_Reale",
+)
 
 df_out_bo = pd.DataFrame({
-    "y_true": y_true_backtest_bo,
-    "y_pred": y_predicted_backtest_bo
+    "Actual": y_true_backtest_bo,
+    "Forecast": y_predicted_backtest_bo
 })
+df_out_bo.index.name = "Date"
 df_out_bo.to_csv(os.path.join(output_dir, f"lstm_bayesoptimization_h{orizzonte}_{evento}.csv"))
 
 
@@ -485,7 +500,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 fig.autofmt_xdate(rotation=45)
 
-output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\1. LSTM\Results\1_Grafici_backtest"
+output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\1_LSTM\With_Polymarket\Results"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}, {evento}")

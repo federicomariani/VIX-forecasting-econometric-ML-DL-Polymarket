@@ -23,7 +23,7 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
 
 
 # -----------------
@@ -35,6 +35,10 @@ orizzonte = 1 # Da cambiare manualmente ad ogni run
 # Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
 target_col = f"Close_VIX_h{orizzonte}"
 dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
+
+# La riga conserva la data delle feature; il target h-step appartiene invece alla data osservata h righe dopo. La conserviamo per etichettare correttamente previsioni e valori reali nei risultati del backtest
+target_date_col = f"Target_Date_h{orizzonte}"
+dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
 # Rimuovo le ultime righe che non hanno un target valido (fine serie)
 dataset_h = dataset.dropna(subset=[target_col])
@@ -396,6 +400,7 @@ print(best_features_bo)
 # Si riuniscono i tre dataset in maniera cronologica per poter effettuare quesa tipologia di backtest
 X_all = pd.concat([X_training, X_validation, X_test])
 y_all = pd.concat([y_training, y_validation, y_test])
+target_dates_all = dataset_h.loc[X_all.index, target_date_col]
 
 n_train = len(X_training)
 n_validation = len(X_validation)
@@ -428,21 +433,26 @@ for i in range(n_test):
 
     pred_cv = xgboost_cv_backtest.predict(X_new)[0]
     y_predicted_list_cv.append(pred_cv)
-    dates_predicted_cv.append(X_all.index[target_idx])
+    dates_predicted_cv.append(target_dates_all.iloc[target_idx])
 
 # Riallineamento valori previsti y con date
 y_predicted_backtest_cv = pd.Series(y_predicted_list_cv, index=dates_predicted_cv, name="VIX_Forecasted")
-y_true_backtest_cv = y_all.loc[y_predicted_backtest_cv.index].rename("VIX_Reale")
+y_true_backtest_cv = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_cv,
+    name="VIX_Reale",
+)
 
 # Cartella comune dove tutti i file-modello salvano i risultati
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\1. Random Forest\Results\0_Forecast"
+output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\1_Random_Forest\Results"
 os.makedirs(output_dir, exist_ok=True)
 
 # Salvo previsioni + valori reali, per la variante Grid-Search per fare poi Model Confidence Set e Diebold-Mariano test
 df_out_cv = pd.DataFrame({
-    "y_true": y_true_backtest_cv,
-    "y_pred": y_predicted_backtest_cv
+    "Actual": y_true_backtest_cv,
+    "Forecast": y_predicted_backtest_cv
 })
+df_out_cv.index.name = "Date"
 df_out_cv.to_csv(os.path.join(output_dir, f"random_forest_gridsearch_h{orizzonte}.csv"))
 
 
@@ -497,17 +507,22 @@ for i in range(n_test):
 
     pred_bo = xgboost_bo_backtest.predict(X_new)[0]
     y_predicted_list_bo.append(pred_bo)
-    dates_predicted_bo.append(X_all.index[target_idx])
+    dates_predicted_bo.append(target_dates_all.iloc[target_idx])
 
 # Riallineamento valori previsti y con date
 y_predicted_backtest_bo = pd.Series(y_predicted_list_bo, index=dates_predicted_bo, name="VIX_Forecasted")
-y_true_backtest_bo = y_all.loc[y_predicted_backtest_bo.index].rename("VIX_Reale")
+y_true_backtest_bo = pd.Series(
+    y_all.iloc[n_train + n_validation:].to_numpy(),
+    index=dates_predicted_bo,
+    name="VIX_Reale",
+)
 
 # Salvo previsioni + valori reali, per la variante Bayesian Optimization
 df_out_bo = pd.DataFrame({
-    "y_true": y_true_backtest_bo,
-    "y_pred": y_predicted_backtest_bo
+    "Actual": y_true_backtest_bo,
+    "Forecast": y_predicted_backtest_bo
 })
+df_out_bo.index.name = "Date"
 df_out_bo.to_csv(os.path.join(output_dir, f"random_forest_bayesoptimization_h{orizzonte}.csv"))
 
 
@@ -550,7 +565,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # un tick ogni mes
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # formato tipo "Gen 2022"
 fig.autofmt_xdate(rotation=45)                                # ruota le etichette per non sovrapporle
 
-output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\1. Random Forest\Results\1_Grafici_backtest"
+output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\1_Random_Forest\Results"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")

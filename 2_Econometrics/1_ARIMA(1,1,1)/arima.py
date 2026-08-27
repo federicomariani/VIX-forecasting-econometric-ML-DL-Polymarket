@@ -13,11 +13,11 @@ warnings.filterwarnings("ignore")
 # ---------
 # PERCORSI 
 # ---------
-base_path = Path(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Econometrics\1. ARIMA(1,1,1)")
+base_path = Path(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\1_ARIMA(1,1,1)")
 
 path_input = base_path / "dataset_econometrics.csv"
-dir_results = base_path / "Results" / "0_Forecast"
-dir_plots = base_path / "Results" / "1_Grafici_backtest"
+dir_results = base_path / "Results" 
+dir_plots = base_path / "Results" 
 
 dir_results.mkdir(parents=True, exist_ok=True)
 dir_plots.mkdir(parents=True, exist_ok=True)
@@ -124,12 +124,16 @@ for h in horizons:
     df_h_results = pd.DataFrame(records)
 
     # CSV
-    df_mcs_export = df_h_results[["target_date", "actual", "forecast"]].copy()
-    df_mcs_export.columns = ["Date", "Actual", "Forecast"]
-    df_mcs_export["Date"] = df_mcs_export["Date"].dt.strftime("%d/%m/%Y")
+    df_mcs_export = (
+        df_h_results
+        .set_index("target_date")[["actual", "forecast"]]
+        .rename(columns={"actual": "Actual", "forecast": "Forecast"})
+    )
+    df_mcs_export.index = df_mcs_export.index.strftime("%d/%m/%Y")
+    df_mcs_export.index.name = "Date"
 
     path_csv_mcs = dir_results / f"arima_forecast_h{h}_aligned.csv"
-    df_mcs_export.to_csv(path_csv_mcs, index=False)
+    df_mcs_export.to_csv(path_csv_mcs)
     
     # Calcolo metriche per ogni orizzonte
     metrics_summary[h] = calc_metrics(

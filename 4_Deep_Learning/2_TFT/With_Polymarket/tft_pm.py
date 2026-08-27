@@ -695,10 +695,11 @@ if __name__ == "__main__":
     y_true_backtest_cv.index = y_predicted_backtest_cv.index
     y_true_backtest_cv = y_true_backtest_cv.rename("VIX_Reale")
 
-    output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\2. TFT\Results\0_Forecast"
+    output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\2_TFT\With_Polymarket\Results"
     os.makedirs(output_dir, exist_ok=True)
 
-    df_out_cv = pd.DataFrame({"y_true": y_true_backtest_cv, "y_pred": y_predicted_backtest_cv})
+    df_out_cv = pd.DataFrame({"Actual": y_true_backtest_cv, "Forecast": y_predicted_backtest_cv})
+    df_out_cv.index.name = "Date"
     df_out_cv.to_csv(os.path.join(output_dir, f"tft_gridsearch_h{orizzonte}_{evento}.csv"))
 
 
@@ -794,7 +795,8 @@ if __name__ == "__main__":
     y_true_backtest_bo.index = y_predicted_backtest_bo.index
     y_true_backtest_bo = y_true_backtest_bo.rename("VIX_Reale")
 
-    df_out_bo = pd.DataFrame({"y_true": y_true_backtest_bo, "y_pred": y_predicted_backtest_bo})
+    df_out_bo = pd.DataFrame({"Actual": y_true_backtest_bo, "Forecast": y_predicted_backtest_bo})
+    df_out_bo.index.name = "Date"
     df_out_bo.to_csv(os.path.join(output_dir, f"tft_bayesoptimization_h{orizzonte}_{evento}.csv"))
 
 
@@ -845,7 +847,7 @@ if __name__ == "__main__":
     # -------------------------------------
     # GRAFICI: VIX REALE vs VIX FORECASTED
     # -------------------------------------
-    output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\2. TFT\Results\1_Grafici_backtest"
+    output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\2_TFT\With_Polymarket\Results"
     os.makedirs(output_dir_grafici, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(14, 6))

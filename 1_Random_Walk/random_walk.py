@@ -33,7 +33,7 @@ oos_end = pd.Timestamp("2026-06-30")
 # -------------------
 # CARTELLA RISULTATI
 # -------------------
-output_dir = (r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\1. Random Walk\0_Forecast")
+output_dir = (r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\1_Random_Walk\Results")
 
 os.makedirs(output_dir, exist_ok=True)
 
@@ -67,7 +67,7 @@ def run_random_walk(h):
     r2_mz = model_mz.rsquared
     
     # Directional Accuracy
-    directional_accuracy = ((results["y_true"] - dataset_rw["y_pred"]) > 0).astype(int)
+    directional_accuracy = ((results["y_true"] - results["y_pred"]) > 0).astype(int)
     forecast_dir = np.zeros(len(results), dtype=int)  # Il RW prevede 0 (var <= 0)
     accuracy_1 = accuracy_score(directional_accuracy, forecast_dir) * 100
 
@@ -82,8 +82,8 @@ def run_random_walk(h):
 
     # File CSV contenente forecasts
     df_out = pd.DataFrame({
-        f"y_true_rw_h{h}": results["y_true"].values,
-        f"y_pred_rw_h{h}": results["y_pred"].values
+        "Actual": results["y_true"].values,
+        "Forecast": results["y_pred"].values
     })
 
     df_out.index = results.index

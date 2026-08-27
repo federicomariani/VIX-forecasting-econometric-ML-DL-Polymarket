@@ -10,7 +10,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolu
 # -------------------------
 # IMPORT DATASET E PULIZIA 
 # -------------------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Econometrics\2. HAR-Type\dataset_econometrics.csv")
+dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\2_HAR-Type\dataset_econometrics.csv")
 
 dataset["Date"] = pd.to_datetime(dataset["Date"], dayfirst=True, errors="coerce")
 dataset = (dataset.dropna(subset=["Date"]).sort_values("Date").reset_index(drop=True))
@@ -265,8 +265,7 @@ def run_har_vix(h):
 # -----------------------------------
 # CARTELLA PER SALVARE RISULTATI CSV
 # -----------------------------------
-output_dir = (r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Econometrics\2. HAR(3)-RV\Results\0_Forecast")
-
+output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\2_HAR-Type\Results"
 os.makedirs(output_dir, exist_ok=True)
 
 
@@ -283,8 +282,8 @@ results_h22 = run_har_vix(22)
 # ----------------------
 if not results_h1.empty:
     df_out_har_h1 = pd.DataFrame({
-        "y_true_har": results_h1["VIX_true"].values,
-        "y_pred_har": results_h1["VIX_hat"].values
+        "Actual": results_h1["VIX_true"].values,
+        "Forecast": results_h1["VIX_hat"].values
     })
 
     df_out_har_h1.index = pd.to_datetime(results_h1["forecast_date"].values)
@@ -293,8 +292,8 @@ if not results_h1.empty:
 
 if not results_h5.empty:
     df_out_har_h5 = pd.DataFrame({
-        "y_true_har": results_h5["VIX_true"].values,
-        "y_pred_har": results_h5["VIX_hat"].values
+        "Actual": results_h5["VIX_true"].values,
+        "Forecast": results_h5["VIX_hat"].values
     })
 
     df_out_har_h5.index = pd.to_datetime(results_h5["forecast_date"].values)
@@ -303,8 +302,8 @@ if not results_h5.empty:
 
 if not results_h22.empty:
     df_out_har_h22 = pd.DataFrame({
-        "y_true_har": results_h22["VIX_true"].values,
-        "y_pred_har": results_h22["VIX_hat"].values
+        "Actual": results_h22["VIX_true"].values,
+        "Forecast": results_h22["VIX_hat"].values
     })
 
     df_out_har_h22.index = pd.to_datetime(results_h22["forecast_date"].values)
