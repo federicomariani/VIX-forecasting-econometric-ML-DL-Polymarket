@@ -81,11 +81,3 @@ Mentre nella cartella 5 sono racchiusi tutti i risultati trovati.
 - **Polymarket**: dati di prezzo storici dei mercati predittivi rilevanti, scaricati
   tramite le API pubbliche di Polymarket (`download_data_polymarket.py`), puliti e
   trasformati in feature (`feature_engineering_polymarket.py`).
-
-## Librerie principali utilizzate
-
-`pandas`, `numpy`, `scikit-learn`, `xgboost`, `statsmodels`, `boruta`, `shap`,
-`torch`, `pytorch-forecasting`, `lightning`, `skorch`, `optuna`, `scikit-optimize`,
-`dieboldmariano`, `model-confidence-set`, `matplotlib`, `yfinance`, `requests`.
-
-Vedi [`requirements.txt`](./requirements.txt) per l'elenco completo.
