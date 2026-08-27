@@ -128,7 +128,7 @@ kwargs_comuni = dict(
 
 
 # ---------------------------------------------------
-# FEATURE SELECTION (Permutation Importance su LSTM)
+# FEATURE RANKING (Permutation Importance su LSTM)
 # ---------------------------------------------------
 # Scaling preliminare, solo per questa fase esplorativa (fit su training)
 scaler_X_fs = RobustScaler()
