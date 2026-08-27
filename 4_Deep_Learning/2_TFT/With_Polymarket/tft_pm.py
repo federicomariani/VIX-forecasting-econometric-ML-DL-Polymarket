@@ -127,11 +127,11 @@ if __name__ == "__main__":
     # ---------------
     # IMPORT DATASET
     # ---------------
-    dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\0. Dataset\df_finale.csv")
+    dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\dataset_w_polymarket.csv")
     dataset["Date"] = pd.to_datetime(dataset["Date"])
     dataset = dataset.sort_values("Date").reset_index(drop=True)    
     
-    evento = "senza PM" # da cambiare manualmente
+    evento = "con_PM" # da cambiare manualmente in "con_PM" quando si usano le features di Polymarket
 
 
     # -----------------
@@ -153,13 +153,13 @@ if __name__ == "__main__":
     
 
     # Come previsione puntuale si prende il quantile 0.5 dell'ultimo step decoder (giorno h)
-    dataset_h = dataset.dropna(subset=predittori + ["Close_VIX"]).reset_index(drop=True) # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
+    dataset_h = dataset.dropna(subset=predittori_w_pm + ["Close_VIX"]).reset_index(drop=True) # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
     dataset_h["time_idx"] = np.arange(len(dataset_h))
     dataset_h["group"] = "VIX"
 
-    mask_training = dataset_h["Date"] <= "2019-12-31"
-    mask_validation = (dataset_h["Date"] >= "2020-01-01") & (dataset_h["Date"] <= "2021-12-31")
-    mask_test = dataset_h["Date"] >= "2022-01-01"
+    mask_training = dataset_h["Date"] <= "2025-11-30"
+    mask_validation = (dataset_h["Date"] >= "2025-12-01") & (dataset_h["Date"] <= "2026-01-31")
+    mask_test = dataset_h["Date"] >= "2026-02-01"
 
     n_train = int(mask_training.sum())
     n_validation = int(mask_validation.sum())
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     max_prediction_length = orizzonte
     max_encoder_length = LOOKBACK
 
-    time_varying_unknown_reals = [p for p in predittori if p != "Weekday"] + ["Close_VIX"] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
+    time_varying_unknown_reals = [p for p in predittori_w_pm if p != "Weekday"] + ["Close_VIX"] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
 
     training_dataset = TimeSeriesDataSet(
         dataset_h[dataset_h.time_idx <= training_cutoff_idx],
@@ -247,7 +247,7 @@ if __name__ == "__main__":
         "Variabile": tft_baseline.encoder_variables,
         "Importanza": interpretation_baseline["encoder_variables"].numpy(),
     })
-    ranking = ranking[ranking["Variabile"].isin(predittori)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
+    ranking = ranking[ranking["Variabile"].isin(predittori_w_pm)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
     ranking = ranking.sort_values("Importanza", ascending=False).reset_index(drop=True)
 
     print("RANKING VARIABLE IMPORTANCE (TFT - Variable Selection Network)")
@@ -401,7 +401,7 @@ if __name__ == "__main__":
         "Variabile": tft_cv.encoder_variables,
         "Importanza": interpretation_cv["encoder_variables"].numpy(),
     })
-    importance_cv = importance_cv[importance_cv["Variabile"].isin(predittori)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
+    importance_cv = importance_cv[importance_cv["Variabile"].isin(predittori_w_pm)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
     importance_cv = importance_cv.sort_values("Importanza", ascending=False).reset_index(drop=True)
 
     print("IMPORTANZA FEATURES DOPO OTTIMIZZAZIONE IPERPARAMETRI - GRID SEARCH CV:")
@@ -432,7 +432,7 @@ if __name__ == "__main__":
         "Variabile": tft_bo.encoder_variables,
         "Importanza": interpretation_bo["encoder_variables"].numpy(),
     })
-    importance_bo = importance_bo[importance_bo["Variabile"].isin(predittori)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
+    importance_bo = importance_bo[importance_bo["Variabile"].isin(predittori_w_pm)] # da cambiare predittori in predittori_w_pm quando si vogliono utilizzare le features di Polymarket
     importance_bo = importance_bo.sort_values("Importanza", ascending=False).reset_index(drop=True)
 
     print("IMPORTANZA FEATURES DOPO OTTIMIZZAZIONE IPERPARAMETRI - BAYESIAN OPTIMIZATION:")
@@ -699,7 +699,7 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
 
     df_out_cv = pd.DataFrame({"y_true": y_true_backtest_cv, "y_pred": y_predicted_backtest_cv})
-    df_out_cv.to_csv(os.path.join(output_dir, f"tft_gridsearch_h{orizzonte}.csv"))
+    df_out_cv.to_csv(os.path.join(output_dir, f"tft_gridsearch_h{orizzonte}_{evento}.csv"))
 
 
     # ------------------------------------------
@@ -738,7 +738,7 @@ if __name__ == "__main__":
     ).mean() * 100
 
     print("\n--- METRICHE BACKTEST SLIDING WINDOW TFT GRID-SEARCH CV ---")
-    print(f"MSE {orizzonte}:  {mse_cv:.4f}")
+    print(f"MSE:  {mse_cv:.4f}")
     print(f"MAE:  {mae_cv:.4f}")
     print(f"MAPE: {mape_cv:.4f}")
     print(f"R^2:  {r2_cv:.4f}")
@@ -795,7 +795,7 @@ if __name__ == "__main__":
     y_true_backtest_bo = y_true_backtest_bo.rename("VIX_Reale")
 
     df_out_bo = pd.DataFrame({"y_true": y_true_backtest_bo, "y_pred": y_predicted_backtest_bo})
-    df_out_bo.to_csv(os.path.join(output_dir, f"tft_bayesoptimization_h{orizzonte}.csv"))
+    df_out_bo.to_csv(os.path.join(output_dir, f"tft_bayesoptimization_h{orizzonte}_{evento}.csv"))
 
 
     # ------------------------------------------------
@@ -834,7 +834,7 @@ if __name__ == "__main__":
     ).mean() * 100
 
     print("\n--- METRICHE BACKTEST SLIDING WINDOW TFT BAYESIAN OPTIMIZATION ---")
-    print(f"MSE {orizzonte}: {mse_bo:.4f}")
+    print(f"MSE: {mse_bo:.4f}")
     print(f"MAE: {mae_bo:.4f}")
     print(f"MAPE: {mape_bo:.4f}")
     print(f"R^2: {r2_bo:.4f}")
@@ -854,12 +854,12 @@ if __name__ == "__main__":
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
     fig.autofmt_xdate(rotation=45)
-    ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
+    ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}, {evento}")
     ax.set_xlabel("Data")
     ax.set_ylabel("VIX")
     ax.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir_grafici, f"tft_CV_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
+    plt.savefig(os.path.join(output_dir_grafici, f"tft_CV_vix_reale_vs_previsto_h{orizzonte}_{evento}.png"), dpi=300, bbox_inches="tight")
     plt.show()
 
     fig, ax = plt.subplots(figsize=(14, 6))
@@ -868,10 +868,10 @@ if __name__ == "__main__":
     ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
     fig.autofmt_xdate(rotation=45)
-    ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
+    ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}, {evento}")
     ax.set_xlabel("Data")
     ax.set_ylabel("VIX")
     ax.legend()
     plt.tight_layout()
-    plt.savefig(os.path.join(output_dir_grafici, f"tft_BO_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
+    plt.savefig(os.path.join(output_dir_grafici, f"tft_BO_vix_reale_vs_previsto_h{orizzonte}_{evento}.png"), dpi=300, bbox_inches="tight")
     plt.show()

@@ -34,7 +34,7 @@ dataset.index = pd.to_datetime(
 orizzonte = 1
 
 # Con o senza PM
-evento = "senza PM" # Da cambiare quando si utilizzano le features di Polymarket
+evento = "senza_PM" # Da cambiare quando si utilizzano le features di Polymarket in "con_PM"
 
 # Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
 target_col = f"Close_VIX_h{orizzonte}"
@@ -71,14 +71,14 @@ target = [target_col] # Variabile dipendente
 # DATA MANIPULATION
 # ------------------
 # Suddivisione matrici in training, validation e test set (prima faccio senza Polymarket features, poi sostituisco e ci metto predittori_w_pm)
-X_training = dataset_h.loc[:"2019-12-31", predittori]
-y_training = dataset_h.loc[:"2019-12-31", target].squeeze() # uso squeeze() perché y deve essere una lista affinché possa essere usata nella funzione XGBoost
+X_training = dataset_h.loc[:"2025-12-30", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_training = dataset_h.loc[:"2025-12-30", target].squeeze() # uso squeeze() in quanto y deve essere una lista affinché possa essere usata dal modello
 
-X_validation = dataset_h.loc["2020-01-01":"2021-12-31", predittori]
-y_validation = dataset_h.loc["2020-01-01":"2021-12-31", target].squeeze()
+X_validation = dataset_h.loc["2025-12-01":"2026-01-31", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_validation = dataset_h.loc["2025-12-01":"2026-01-31", target].squeeze()
 
-X_test = dataset_h.loc["2022-01-01":, predittori]
-y_test = dataset_h.loc["2022-01-01":, target].squeeze()
+X_test = dataset_h.loc["2026-02-01":, predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_test = dataset_h.loc["2026-02-01":, target].squeeze()
 
 # Unione del train e del validation set in quanto richiesto da PredefinedSplit 
 X_train_validation = pd.concat([X_training, X_validation])
@@ -414,7 +414,7 @@ df_out_cv = pd.DataFrame({
     "y_true": y_true_backtest_cv,
     "y_pred": y_predicted_backtest_cv
 })
-df_out_cv.to_csv(os.path.join(output_dir, f"xgboost_gridsearch_h{orizzonte}.csv"))
+df_out_cv.to_csv(os.path.join(output_dir, f"xgboost_gridsearch_h{orizzonte}_{evento}.csv"))
 
 
 # ------------------------
@@ -431,7 +431,7 @@ predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_true_backtest_cv.sh
 directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).iloc[1:].mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW XGBOOST GRID-SEARCH CV ---")
-print(f"MSE {orizzonte}:  {mse_cv:.4f}")
+print(f"MSE:  {mse_cv:.4f}")
 print(f"MAE:  {mae_cv:.4f}")
 print(f"MAPE: {mape_cv:.4f}")
 print(f"R^2:  {r2_cv:.4f}")
@@ -478,7 +478,7 @@ df_out_bo = pd.DataFrame({
     "y_true": y_true_backtest_bo,
     "y_pred": y_predicted_backtest_bo
 })
-df_out_bo.to_csv(os.path.join(output_dir, f"xgboost_bayesoptimization_h{orizzonte}.csv"))
+df_out_bo.to_csv(os.path.join(output_dir, f"xgboost_bayesoptimization_h{orizzonte}_{evento}.csv"))
 
 
 # ------------------------
@@ -495,7 +495,7 @@ predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_true_backtest_bo.sh
 directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).iloc[1:].mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW XGBOOST BAYESIAN OPTIMIZATION ---")
-print(f"MSE {orizzonte}: {mse_bo:.4f}")
+print(f"MSE: {mse_bo:.4f}")
 print(f"MAE: {mae_bo:.4f}")
 print(f"MAPE: {mape_bo:.4f}")
 print(f"R^2: {r2_bo:.4f}")
@@ -520,12 +520,12 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # un tick ogni mes
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # formato tipo "Gen 2022"
 fig.autofmt_xdate(rotation=45)                                # ruota le etichette per non sovrapporle
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
+ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}, {evento}")
 ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_CV_vix_reale_vs_previsto_h{orizzonte}.png", dpi=300, bbox_inches="tight")
+plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_CV_vix_reale_vs_previsto_h{orizzonte}_{evento}.png", dpi=300, bbox_inches="tight")
 plt.show()
 
 
@@ -543,10 +543,10 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   
 fig.autofmt_xdate(rotation=45)                                
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
+ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}, {evento}")
 ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_BO_vix_reale_vs_previsto_h{orizzonte}.png", dpi=300, bbox_inches="tight")
+plt.savefig(rf"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Machine Learning\2. XGBoost\Results\xgboost_BO_vix_reale_vs_previsto_h{orizzonte}_{evento}.png", dpi=300, bbox_inches="tight")
 plt.show()

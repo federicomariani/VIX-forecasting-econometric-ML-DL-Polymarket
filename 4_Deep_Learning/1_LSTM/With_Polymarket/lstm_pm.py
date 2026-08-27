@@ -45,7 +45,7 @@ dataset.index = pd.to_datetime(
 orizzonte = 1 # da cambiare manualmente ad ogni run del codice
 
 # Con o senza PM
-evento = "con PM" # Da cambiare manualmente quando si aggiungono o tolgono le features di Polymarket
+evento = "senza_PM" # Da cambiare manualmente quando si aggiungono le features di Polymarket in "con_PM"
 
 lookback = 20  # lunghezza della finestra di input 
 
@@ -78,14 +78,14 @@ target = [target_col]
 # DATA MANIPULATION
 # ------------------
 # Split cronologico. Cambiare predittori in predittori_w_pm e viceversa quando si vogliono utilizzare le features di Polymarket
-X_training = dataset_h.loc[:"2019-12-31", predittori]
-y_training = dataset_h.loc[:"2019-12-31", target].squeeze()
+X_training = dataset_h.loc[:"2025-12-30", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_training = dataset_h.loc[:"2025-12-30", target].squeeze()
 
-X_validation = dataset_h.loc["2020-01-01":"2021-12-31", predittori]
-y_validation = dataset_h.loc["2020-01-01":"2021-12-31", target].squeeze()
+X_validation = dataset_h.loc["2025-12-01":"2026-01-31", predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_validation = dataset_h.loc["2025-12-01":"2026-01-31", target].squeeze()
 
-X_test = dataset_h.loc["2022-01-01":, predittori]
-y_test = dataset_h.loc["2022-01-01":, target].squeeze()
+X_test = dataset_h.loc["2026-02-01":, predittori] # cambiare "predittori" in "predittori_w_pm" quando si utilizzano le features di Polymarket
+y_test = dataset_h.loc["2026-02-01":, target].squeeze()
 
 X_train_validation = pd.concat([X_training, X_validation])
 y_train_validation = pd.concat([y_training, y_validation])
@@ -430,7 +430,7 @@ df_out_cv = pd.DataFrame({
     "y_true": y_true_backtest_cv,
     "y_pred": y_predicted_backtest_cv
 })
-df_out_cv.to_csv(os.path.join(output_dir, f"lstm_gridsearch_h{orizzonte}.csv"))
+df_out_cv.to_csv(os.path.join(output_dir, f"lstm_gridsearch_h{orizzonte}_{evento}.csv"))
 
 
 # ------------------------
@@ -447,7 +447,7 @@ predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_true_backtest_cv.sh
 directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).iloc[1:].mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM GRID-SEARCH CV ---")
-print(f"MSE {orizzonte}:  {mse_cv:.4f}")
+print(f"MSE:  {mse_cv:.4f}")
 print(f"MAE:  {mae_cv:.4f}")
 print(f"MAPE: {mape_cv:.4f}")
 print(f"R^2:  {r2_cv:.4f}")
@@ -503,7 +503,7 @@ df_out_bo = pd.DataFrame({
     "y_true": y_true_backtest_bo,
     "y_pred": y_predicted_backtest_bo
 })
-df_out_bo.to_csv(os.path.join(output_dir, f"lstm_bayesoptimization_h{orizzonte}.csv"))
+df_out_bo.to_csv(os.path.join(output_dir, f"lstm_bayesoptimization_h{orizzonte}_{evento}.csv"))
 
 
 # ------------------------
@@ -520,7 +520,7 @@ predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_true_backtest_bo.sh
 directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).iloc[1:].mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM BAYESIAN OPTIMIZATION ---")
-print(f"MSE {orizzonte}: {mse_bo:.4f}")
+print(f"MSE: {mse_bo:.4f}")
 print(f"MAE: {mae_bo:.4f}")
 print(f"MAPE: {mape_bo:.4f}")
 print(f"R^2: {r2_bo:.4f}")
@@ -546,12 +546,12 @@ fig.autofmt_xdate(rotation=45)
 output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\1. LSTM\Results\1_Grafici_backtest"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
+ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}, {evento}")
 ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(output_dir_grafici, f"lstm_CV_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
+plt.savefig(os.path.join(output_dir_grafici, f"lstm_CV_vix_reale_vs_previsto_h{orizzonte}_{evento}.png"), dpi=300, bbox_inches="tight")
 plt.show()
 
 y_true_backtest_bo.index = pd.to_datetime(y_true_backtest_bo.index)
@@ -566,10 +566,10 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 fig.autofmt_xdate(rotation=45)
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
+ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}, {evento}")
 ax.set_xlabel("Data")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
-plt.savefig(os.path.join(output_dir_grafici, f"lstm_BO_vix_reale_vs_previsto_h{orizzonte}.png"), dpi=300, bbox_inches="tight")
+plt.savefig(os.path.join(output_dir_grafici, f"lstm_BO_vix_reale_vs_previsto_h{orizzonte}_{evento}.png"), dpi=300, bbox_inches="tight")
 plt.show()

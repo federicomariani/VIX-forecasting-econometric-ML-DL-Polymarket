@@ -127,7 +127,7 @@ if __name__ == "__main__":
     # ---------------
     # IMPORT DATASET
     # ---------------
-    dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\0. Dataset\Data\Clean\dataset.csv")
+    dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv")
     dataset["Date"] = pd.to_datetime(dataset["Date"])
     dataset = dataset.sort_values("Date").reset_index(drop=True)
 
@@ -682,7 +682,6 @@ if __name__ == "__main__":
     ]   
     y_true_backtest_cv.index = y_predicted_backtest_cv.index
     y_true_backtest_cv = y_true_backtest_cv.rename("VIX_Reale")
-
     output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\3. Deep Learning\2. TFT\Results\0_Forecast"
     os.makedirs(output_dir, exist_ok=True)
 
