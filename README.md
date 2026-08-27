@@ -66,14 +66,13 @@ regimi di volatilità (Low / Medium / High).
 │   ├── metriche.py
 │   └── regimi_vol.py
 │
-├── tesi.pdf
-├── requirements.txt
 └── README.md
 ```
 
 Ogni cartella dei modelli (2-4) contiene una sottocartella `results/` con le metriche calcolate, 
 ed è replicata in una variante `with_polymarket/` per i modelli
 addestrati anche con le feature di Polymarket.
+Mentre nella cartella 5 sono racchiusi tutti i risultati trovati.
 
 ## Dati
 
