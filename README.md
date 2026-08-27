@@ -18,7 +18,7 @@ mercati predittivi (Polymarket) nei modelli di Machine Learning e Deep Learning,
 valutare se le probabilità implicite in questi mercati aggiungano informazione utile
 alla previsione.
 
-I modelli sono confrontati tramite metriche di accuratezza puntuale (MSE, QLIKE),
+I modelli sono confrontati tramite metriche di accuratezza puntuale (MSE, MAE, MAPE, R^2, QLIKE),
 Directional Accuracy, test di Diebold-Mariano e Model Confidence Set, anche su diversi
 regimi di volatilità (Low / Medium / High).
 
