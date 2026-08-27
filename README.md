@@ -1,6 +1,8 @@
 # Previsione del VIX tra modelli econometrici, Machine Learning e Deep Learning: un confronto multi-orizzonte con l’integrazione di dati da Polymarket
 Tesi di Laurea Triennale in Economia: Banche, Aziende e Mercati
+
 **Università degli Studi di Macerata** - Dipartimento di Economia e Diritto
+
 Anno Accademico 2025-2026
 
 - **Candidato:** Federico Mariani
