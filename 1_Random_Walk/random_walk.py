@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, mean_squared_error, mean_absolute_er
 # -----------------
 # DOWNLOAD DATASET
 # -----------------
-dataset = yf.download("^VIX", start = "2014-01-01", end = "2026-07-01")
+dataset = yf.download("^VIX", start = "2014-02-01", end = "2026-07-01")
 
 
 # ------------------
@@ -26,14 +26,14 @@ dataset = dataset.dropna(subset=["Close"])
 dataset = dataset.sort_index()
 
 # Split dataset
-oos_start = pd.Timestamp("2022-01-01")
+oos_start = pd.Timestamp("2022-10-05")
 oos_end = pd.Timestamp("2026-06-30")
 
 
 # -------------------
 # CARTELLA RISULTATI
 # -------------------
-output_dir = (r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\1_Random_Walk\Results")
+output_dir = (r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici")
 
 os.makedirs(output_dir, exist_ok=True)
 

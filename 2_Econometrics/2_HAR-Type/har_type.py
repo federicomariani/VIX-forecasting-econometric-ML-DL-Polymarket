@@ -10,41 +10,41 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolu
 # -------------------------
 # IMPORT DATASET E PULIZIA 
 # -------------------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\2_HAR-Type\dataset_econometrics.csv")
+dataset = pd.read_csv(
+    r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv",
+    index_col="Date",
+    parse_dates=["Date"],
+)
 
-dataset["Date"] = pd.to_datetime(dataset["Date"], dayfirst=True, errors="coerce")
-dataset = (dataset.dropna(subset=["Date"]).sort_values("Date").reset_index(drop=True))
+print(dataset.columns)
+
+dataset.index.name = "Date"
+dataset = dataset.sort_index()
+dataset = dataset[~dataset.index.duplicated(keep="first")]
+dataset["Close_VIX"] = pd.to_numeric(dataset["Close_VIX"], errors="coerce")
+dataset = dataset.dropna(subset=["Close_VIX"]).copy()
 
 
 # ---------------------------------------
 # COSTRUZIONE VARIABILI MODELLO HAR-TYPE
 # ---------------------------------------
 # Componente giornaliera
-dataset["logVIX_d"] = dataset["VIX_log"]
+dataset["VIX_log"] = np.log(dataset["Close_VIX"])
+dataset["logVIX_1"] = dataset["VIX_log"]
 
-# Componente settimanale
-dataset["VIX_w"] = (dataset["VIX"].rolling(window=5).mean())
-dataset["logVIX_w"] = np.log(dataset["VIX_w"])
+# Componente settimanale log
+dataset["logVIX_MA_5"] = np.log(dataset["VIX_MA5"])
 
 # Componente mensile
-dataset["VIX_m"] = (dataset["VIX"].rolling(window=22).mean())
-dataset["logVIX_m"] = np.log(dataset["VIX_m"])
+dataset["logVIX_MA_22"] = np.log(dataset["VIX_MA22"])
 
 # Elimina NaN generati dalle medie
-dataset = (dataset.dropna(subset=["logVIX_d", "logVIX_w", "logVIX_m"]).reset_index(drop=True))
+dataset = dataset.dropna(
+    subset=["logVIX_1", "logVIX_MA_5", "logVIX_MA_22"]
+).reset_index()
 
 # Features del modello
-features = ["logVIX_d", "logVIX_w", "logVIX_m"]
-
-
-# ----------------------------------
-# PERIODO IN-SAMPLE E OUT-OF-SAMPLE
-# ----------------------------------
-is_start = pd.Timestamp("2014-01-01")
-is_end = pd.Timestamp("2021-12-31")
-
-oos_start = pd.Timestamp("2022-01-01")
-oos_end = pd.Timestamp("2026-06-30")
+features = ["logVIX_1", "logVIX_MA_5", "logVIX_MA_22"]
 
 
 # ------------------------------------
@@ -52,10 +52,24 @@ oos_end = pd.Timestamp("2026-06-30")
 # ------------------------------------
 dataset["Date_num"] = np.arange(1, len(dataset) + 1)
 
-d1 = dataset.loc[dataset["Date"] == is_end, "Date_num"].iloc[0]
-d2 = dataset.loc[dataset["Date"] == pd.Timestamp("2018-01-02"), "Date_num"].iloc[0]
+n_observations = len(dataset)
+train_end_idx = int(n_observations * 0.70)
+window_size = train_end_idx
 
-window_size = d1 - d2 + 1
+train_data = dataset.iloc[:train_end_idx]
+test_data = dataset.iloc[train_end_idx:]
+
+print("\nSUDDIVISIONE DATASET")
+print(
+    f"Training set: {len(train_data)} osservazioni "
+    f"({len(train_data) / n_observations:.2%}) | "
+    f"{train_data.iloc[0]['Date'].date()} - {train_data.iloc[-1]['Date'].date()}"
+)
+print(
+    f"Test set: {len(test_data)} osservazioni "
+    f"({len(test_data) / n_observations:.2%}) | "
+    f"{test_data.iloc[0]['Date'].date()} - {test_data.iloc[-1]['Date'].date()}"
+)
 
 
 # ------------------------
@@ -70,7 +84,7 @@ def run_har_vix(h):
 
     for i in dataset.index:
         origin_date = dataset.loc[i, "Date"]
-        if not (origin_date >= oos_start and origin_date <= oos_end):
+        if i < train_end_idx:
             continue
 
         future_index = i + h
@@ -78,9 +92,6 @@ def run_har_vix(h):
             continue
 
         forecast_date = dataset.loc[future_index, "Date"]
-        if forecast_date > oos_end:
-            continue
-
         if pd.isna(dataset.loc[future_index, "VIX_log"]):
             continue
 
@@ -141,9 +152,9 @@ def run_har_vix(h):
             "VIX_true": VIX_true,
             "VIX_hat": VIX_hat,
             "b0": model.params["const"],
-            "bD": model.params["logVIX_d"],
-            "bW": model.params["logVIX_w"],
-            "bM": model.params["logVIX_m"],
+            "bD": model.params["logVIX_1"],
+            "bW": model.params["logVIX_MA_5"],
+            "bM": model.params["logVIX_MA_22"],
             "R2_IS": model.rsquared
         })
 
@@ -256,16 +267,19 @@ def run_har_vix(h):
     # --------------
     # SALVA GRAFICO
     # --------------
-    graph_path = (r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\2. Econometrics\2. HAR-Type\Results\1_Grafici_backtest\HAR_VIX_h{h}.png")
-
+    graph_path = (rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici\har_h{h}.png")
+    
+    os.makedirs(os.path.dirname(graph_path), exist_ok=True)
     plt.savefig(graph_path, dpi=300, bbox_inches="tight")
     plt.show()
+    
+    return results
 
 
 # -----------------------------------
 # CARTELLA PER SALVARE RISULTATI CSV
 # -----------------------------------
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\2_HAR-Type\Results"
+output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici"
 os.makedirs(output_dir, exist_ok=True)
 
 
@@ -386,6 +400,4 @@ summary = pd.DataFrame({
 
 print(summary.to_string(index=False))
 
-summary.to_csv(os.path.join(output_dir, "har_summary.csv"), index=False)
-
-
+# summary.to_csv(os.path.join(output_dir, "har_summary.csv"), index=False)

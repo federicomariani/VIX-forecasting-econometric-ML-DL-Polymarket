@@ -23,14 +23,14 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
 
 
 # -----------------
 # DATA PREPARATION
 # -----------------
 # Orizzonte di previsione 1, 5 e 22 giorni
-orizzonte = 1 # Da cambiare manualmente ad ogni run
+orizzonte = 22 # Da cambiare manualmente ad ogni run
 
 # Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
 target_col = f"Close_VIX_h{orizzonte}"
@@ -40,13 +40,10 @@ dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
 target_date_col = f"Target_Date_h{orizzonte}"
 dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
-# Rimuovo le ultime righe che non hanno un target valido (fine serie)
-dataset_h = dataset.dropna(subset=[target_col])
-
 # Creazione matrice variabili indipendenti e vettore variabile dipendente 
 predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_spread",
               "VIX_lag1", "VIX_lag5", "VIX_lag22", "RSI_14d", "Log_Return_DXY",
-              "Yield_curve", "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", "VIX_MA20",
+              "Yield_curve", "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", "VIX_MA22",
               "Credit_Spread", "Log_Return_Gold", "Weekday"] 
 target = [target_col] # Variabile dipendente
 
@@ -54,15 +51,38 @@ target = [target_col] # Variabile dipendente
 # ------------------
 # DATA MANIPULATION
 # ------------------
+# Rimuovo le ultime righe che non hanno un target valido (fine serie)
+dataset_h = dataset.dropna(subset=predittori + [target_col])
+
 # Suddivisione matrici in training, validation e test set
-X_training = dataset_h.loc[:"2019-12-31", predittori]
-y_training = dataset_h.loc[:"2019-12-31", target].squeeze() # uso squeeze() perché y deve essere una lista affinché possa essere usata nella funzione XGBoost
+X = dataset_h[predittori]
+y = dataset_h[target_col]
 
-X_validation = dataset_h.loc["2020-01-01":"2021-12-31", predittori]
-y_validation = dataset_h.loc["2020-01-01":"2021-12-31", target].squeeze()
+n_observations = len(X)
 
-X_test = dataset_h.loc["2022-01-01":, predittori]
-y_test = dataset_h.loc["2022-01-01":, target].squeeze()
+train_end = int(n_observations * 0.60)
+validation_end = int(n_observations * 0.70)
+
+X_training = X.iloc[:train_end]
+X_validation = X.iloc[train_end:validation_end]
+X_test = X.iloc[validation_end:]
+
+y_training = y.iloc[:train_end].squeeze()
+y_validation = y.iloc[train_end:validation_end].squeeze()
+y_test = y.iloc[validation_end:].squeeze()
+
+print(f"Training set: {len(X_training)} osservazioni ({len(X_training) / n_observations:.2%})")
+print(f"Validation set: {len(X_validation)} osservazioni ({len(X_validation) / n_observations:.2%})")
+print(f"Test set: {len(X_test)} osservazioni ({len(X_test) / n_observations:.2%})")
+
+for nome, dataset_split in [
+    ("Training", X_training),
+    ("Validation", X_validation),
+    ("Test", X_test)
+]:
+    print(f"\n{nome} set:")
+    print(f"Primo elemento: {dataset_split.index[0]}")
+    print(f"Ultimo elemento: {dataset_split.index[-1]}")
 
 # Unione del train e del validation set in quanto richiesto da PredefinedSplit 
 X_train_validation = pd.concat([X_training, X_validation])
@@ -130,9 +150,9 @@ print(f"Ranking delle variabili:{ranking.sort_values('Rank')}")
 # GRID SEARCH CV OPTIMIZATION IPERPARAMETRI
 # ------------------------------------------
 param_grid_cross_validation = {
-    "n_estimators": [100, 200, 300],
+    "n_estimators": [100, 200, 300, 400, 500],
     "max_features": ["sqrt", "log2"], 
-    "max_depth": [None, 10, 20],
+    "max_depth": [10, 20, 30, 40, 50],
     "min_samples_leaf": [1, 2, 3, 4, 5],
 }
 
@@ -146,6 +166,8 @@ grid_search = GridSearchCV(
     cv=ps,
     scoring="neg_mean_squared_error",
     n_jobs=-1,
+    refit=True,
+    return_train_score=True,
     verbose=2,
 )
 
@@ -161,11 +183,13 @@ print("TEMPO DI TUNING GRID-SEARCH CV:", tempo_grid_search)
 # BAYESIAN OPTIMIZATION IPERPARAMETRI
 # ------------------------------------------
 search_spaces_bayesian_optimization = {
-    "n_estimators": Categorical([100, 200, 300]),
+    "n_estimators": Integer(100, 500),
     "max_features": Categorical(["sqrt", "log2"]),
-    "max_depth": Categorical([None, 10, 20]),
+    "max_depth": Integer(10, 50),
     "min_samples_leaf": Integer(1, 5),
 }
+
+n_iter_bayesian = 100
 
 start_bayesian_optimization = time.time()
 
@@ -174,9 +198,11 @@ bayesian_optimization = BayesSearchCV(
     search_spaces=search_spaces_bayesian_optimization,
     scoring="neg_mean_squared_error",
     cv=ps,
-    n_iter=n_iter_grid_search,
+    n_iter=n_iter_bayesian,
     n_jobs=-1,
     random_state=42,
+    refit=True,
+    return_train_score=True,
     verbose=2,
 )
 
@@ -241,7 +267,7 @@ print(f"{ranking_boruta_cv.sort_values("Rank")}")
 # ---------------------------------------------------------------------------------------------
 # Features importance dopo ottimizzazione iperparametri 
 model_bo = RandomForestRegressor(
-    **bayesian_optimization.best_params_,
+    **best_iperparameters_bayesian_optimization,
     random_state = 42
 )
 
@@ -418,15 +444,18 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
     
-    train_window_X = X_all.iloc[i : i + n_train + n_validation][best_features_cv]
-    train_window_y = y_all.iloc[i : i + n_train + n_validation]
-    
     target_idx = i + n_train + n_validation
+    
+    # Sono utilizzabili solo le coppie X(tau), y(tau+h) il cui target è già osservabile alla data di origine target_idx.
+    train_end = target_idx - orizzonte + 1
+    train_window_X = X_all.iloc[i:train_end][best_features_cv]
+    train_window_y = y_all.iloc[i:train_end]
+
     X_new = X_all.iloc[[target_idx]][best_features_cv]
     
     xgboost_cv_backtest = RandomForestRegressor(
         **best_iperparameters_cross_validation,
-         n_jobs=-1,
+        n_jobs=-1,
         random_state=42,
     )
     xgboost_cv_backtest.fit(train_window_X, train_window_y)
@@ -444,7 +473,7 @@ y_true_backtest_cv = pd.Series(
 )
 
 # Cartella comune dove tutti i file-modello salvano i risultati
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\1_Random_Forest\Results"
+output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
 os.makedirs(output_dir, exist_ok=True)
 
 # Salvo previsioni + valori reali, per la variante Grid-Search per fare poi Model Confidence Set e Diebold-Mariano test
@@ -492,15 +521,18 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
     
-    train_window_X = X_all.iloc[i : i + n_train + n_validation][best_features_bo]
-    train_window_y = y_all.iloc[i : i + n_train + n_validation]
-    
     target_idx = i + n_train + n_validation
+    
+    # Sono utilizzabili solo le coppie X(tau), y(tau+h) il cui target è già osservabile alla data di origine target_idx.
+    train_end = target_idx - orizzonte + 1
+    train_window_X = X_all.iloc[i:train_end][best_features_bo]
+    train_window_y = y_all.iloc[i:train_end]
+
     X_new = X_all.iloc[[target_idx]][best_features_bo]
     
     xgboost_bo_backtest = RandomForestRegressor(
-        **bayesian_optimization.best_params_,
-         n_jobs=-1,
+        **best_iperparameters_bayesian_optimization,
+        n_jobs=-1,
         random_state=42,
     )
     xgboost_bo_backtest.fit(train_window_X, train_window_y)
@@ -540,7 +572,7 @@ predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_true_backtest_bo.sh
 directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).iloc[1:].mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW RANDOM FOREST BAYESIAN OPTIMIZATION ---")
-print(f"MSE {orizzonte}: {mse_bo:.4f}")
+print(f"MSE: {mse_bo:.4f}")
 print(f"MAE: {mae_bo:.4f}")
 print(f"MAPE: {mape_bo:.4f}")
 print(f"R^2: {r2_bo:.4f}")
@@ -565,7 +597,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # un tick ogni mes
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # formato tipo "Gen 2022"
 fig.autofmt_xdate(rotation=45)                                # ruota le etichette per non sovrapporle
 
-output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\3_Machine_Learning\1_Random_Forest\Results"
+output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")

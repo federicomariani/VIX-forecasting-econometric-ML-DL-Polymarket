@@ -13,11 +13,11 @@ warnings.filterwarnings("ignore")
 # ---------
 # PERCORSI 
 # ---------
-base_path = Path(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\2_Econometrics\1_ARIMA(1,1,1)")
+base_path = Path(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean")
 
-path_input = base_path / "dataset_econometrics.csv"
-dir_results = base_path / "Results" 
-dir_plots = base_path / "Results" 
+path_input = base_path / "dataset.csv"
+dir_results = Path(r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici")
+dir_plots = dir_results 
 
 dir_results.mkdir(parents=True, exist_ok=True)
 dir_plots.mkdir(parents=True, exist_ok=True)
@@ -26,28 +26,39 @@ dir_plots.mkdir(parents=True, exist_ok=True)
 # -------------------------
 # IMPORT DATASET E PULIZIA
 # -------------------------
-df = pd.read_csv(path_input)
-
-df["Date"] = pd.to_datetime(df["Date"], errors="coerce", dayfirst=True)
-df = df.dropna(subset=["Date"]).drop_duplicates(subset="Date", keep="first")
-df = df.sort_values("Date").reset_index(drop=True)
-
-in_sample_start = pd.Timestamp("2014-01-01")
-in_sample_end = pd.Timestamp("2021-12-31")
-
-values = df["VIX_log"].values
-dates = df["Date"].values
-n = len(values)
-
-# Indice della prima data target OOS 
-target_start_idx = int(df.index[df["Date"] >= pd.Timestamp("2022-01-03")][0])
-
-# Calcolo ampiezza finestra rolling fissa
-train_start_idx = int(df.index[df["Date"] >= in_sample_start][0])
-train_end_idx = int(df.index[df["Date"] <= in_sample_end][-1])
-window_size = train_end_idx - train_start_idx + 1
+df = pd.read_csv(path_input,
+    index_col="Date",
+    parse_dates=["Date"],
+)
+df.index.name = "Date"
 
 horizons = [1, 5, 22]
+orizzonte = 1 # variabile usata solo per stampare splitting dati
+df = df.iloc[:-orizzonte].copy()
+
+values = np.log(df["Close_VIX"]).values
+dates = df.index.values
+n = len(values)
+
+# Suddivisione cronologica: 70% training e 30% test
+train_end_idx = int(n * 0.70)
+target_start_idx = train_end_idx
+window_size = train_end_idx
+
+train_data = df.iloc[:train_end_idx]
+test_data = df.iloc[target_start_idx:]
+
+print("\nSUDDIVISIONE DATASET")
+print(
+    f"Training set: {len(train_data)} osservazioni "
+    f"({len(train_data) / n:.2%}) | "
+    f"{train_data.index[0].date()} - {train_data.index[-1].date()}"
+)
+print(
+    f"Test set: {len(test_data)} osservazioni "
+    f"({len(test_data) / n:.2%}) | "
+    f"{test_data.index[0].date()} - {test_data.index[-1].date()}"
+)
 
 
 # -----------------
@@ -90,7 +101,9 @@ metrics_summary = {}
 for h in horizons:
     print(f"ELABORAZIONE ORIZZONTE h = {h}")
     
-    start_origin_idx = target_start_idx - h
+    # Il primo forecast parte dall'inizio del test set e prevede h passi avanti.
+    # In questo modo la finestra iniziale resta interamente nel training set.
+    start_origin_idx = target_start_idx
     
     records = []
     t0 = time.time()
@@ -132,7 +145,7 @@ for h in horizons:
     df_mcs_export.index = df_mcs_export.index.strftime("%d/%m/%Y")
     df_mcs_export.index.name = "Date"
 
-    path_csv_mcs = dir_results / f"arima_forecast_h{h}_aligned.csv"
+    path_csv_mcs = dir_results / f"arima_h{h}.csv"
     df_mcs_export.to_csv(path_csv_mcs)
     
     # Calcolo metriche per ogni orizzonte
@@ -157,7 +170,7 @@ for h in horizons:
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
 
-    path_plot = dir_plots / f"arima_forecast_h{h}.png"
+    path_plot = dir_plots / f"arima_h{h}.png"
     plt.savefig(path_plot, dpi=150)
     plt.close()
 

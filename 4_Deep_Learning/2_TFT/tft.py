@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     N_WORKERS = 0
 
-    orizzonte = 1 # da cambiare manualmente ad ogni run
+    orizzonte = 22 # da cambiare manualmente ad ogni run
     LOOKBACK = 20
 
     MAX_EPOCHS_TUNING = 12
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     # ---------------
     # IMPORT DATASET
     # ---------------
-    dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv")
+    dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv")
     dataset["Date"] = pd.to_datetime(dataset["Date"])
     dataset = dataset.sort_values("Date").reset_index(drop=True)
 
@@ -135,28 +135,45 @@ if __name__ == "__main__":
     # -----------------
     # DATA PREPARATION
     # -----------------
-    predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_spread",
-                "VIX_lag1", "VIX_lag5", "VIX_lag22", "RSI_14d", "Log_Return_DXY",
-                "Yield_curve", "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", "VIX_MA20",
-                "Credit_Spread", "Log_Return_Gold", "Weekday"]
+    predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", 
+                  "OVX_VIX_spread", "Close_VIX", "RSI_14d", "Log_Return_DXY",
+                  "Yield_curve", "Log_difference_initial_claims",
+                  "Credit_Spread", "Log_Return_Gold", "Weekday"]
 
     # Come previsione puntuale si prende il quantile 0.5 dell'ultimo step decoder (giorno h)
     dataset_h = dataset.dropna(subset=predittori + ["Close_VIX"]).reset_index(drop=True)
     dataset_h["time_idx"] = np.arange(len(dataset_h))
     dataset_h["group"] = "VIX"
 
-    mask_training = dataset_h["Date"] <= "2019-12-31"
-    mask_validation = (dataset_h["Date"] >= "2020-01-01") & (dataset_h["Date"] <= "2021-12-31")
-    mask_test = dataset_h["Date"] >= "2022-01-01"
+    # Suddivisione cronologica: 60% training, 10% validation e 30% test
+    n_observations = len(dataset_h)
+    n_train = int(n_observations * 0.60)
+    n_validation = int(n_observations * 0.10)
+    n_test = n_observations - n_train - n_validation
 
-    n_train = int(mask_training.sum())
-    n_validation = int(mask_validation.sum())
-    n_test = int(mask_test.sum())
+    training_cutoff_idx = n_train - 1
+    validation_cutoff_idx = n_train + n_validation - 1
 
-    training_cutoff_idx = dataset_h.loc[mask_training, "time_idx"].max()
-    validation_cutoff_idx = dataset_h.loc[mask_validation, "time_idx"].max()
+    train_data = dataset_h.iloc[:n_train]
+    validation_data = dataset_h.iloc[n_train:n_train + n_validation]
+    test_data = dataset_h.iloc[n_train + n_validation:]
 
-    print(f"n_train={n_train}, n_validation={n_validation}, n_test={n_test}")
+    print("\nSUDDIVISIONE DATASET")
+    print(
+        f"Training set: {len(train_data)} osservazioni "
+        f"({len(train_data) / n_observations:.2%}) | "
+        f"{train_data.iloc[0]['Date'].date()} - {train_data.iloc[-1]['Date'].date()}"
+    )
+    print(
+        f"Validation set: {len(validation_data)} osservazioni "
+        f"({len(validation_data) / n_observations:.2%}) | "
+        f"{validation_data.iloc[0]['Date'].date()} - {validation_data.iloc[-1]['Date'].date()}"
+    )
+    print(
+        f"Test set: {len(test_data)} osservazioni "
+        f"({len(test_data) / n_observations:.2%}) | "
+        f"{test_data.iloc[0]['Date'].date()} - {test_data.iloc[-1]['Date'].date()}"
+    )
 
 
     # -------------------------------------------------------------------------
@@ -165,7 +182,7 @@ if __name__ == "__main__":
     max_prediction_length = orizzonte
     max_encoder_length = LOOKBACK
 
-    time_varying_unknown_reals = [p for p in predittori if p != "Weekday"] + ["Close_VIX"]
+    time_varying_unknown_reals = [p for p in predittori if p != "Weekday"]
 
     training_dataset = TimeSeriesDataSet(
         dataset_h[dataset_h.time_idx <= training_cutoff_idx],
@@ -300,20 +317,43 @@ if __name__ == "__main__":
     # -------------------------------------
     # BAYESIAN OPTIMIZATION (Optuna / TPE)
     # -------------------------------------
+    # Intervalli continui per i parametri numerici; le dimensioni della rete
+    # restano intere e il numero di teste resta una scelta categorica.
     search_spaces_bayesian_optimization = {
-        "hidden_size": [8, 16, 24],
-        "hidden_continuous_size": [8, 16],
+        "hidden_size": (8, 24),
+        "hidden_continuous_size": (8, 16),
         "attention_head_size": [1, 2],
-        "dropout": [0.1, 0.2, 0.3],
-        "learning_rate": [0.001, 0.01, 0.03, 0.1],
+        "dropout": (0.1, 0.3),
+        "learning_rate": (0.001, 0.1),
     }
+
+    n_iter_bayesian = 50
 
     start_bayesian_optimization = time.time()
 
     def objective(trial):
         params = {
-            name: trial.suggest_categorical(name, values)
-            for name, values in search_spaces_bayesian_optimization.items()
+            "hidden_size": trial.suggest_int(
+                "hidden_size",
+                *search_spaces_bayesian_optimization["hidden_size"],
+            ),
+            "hidden_continuous_size": trial.suggest_int(
+                "hidden_continuous_size",
+                *search_spaces_bayesian_optimization["hidden_continuous_size"],
+            ),
+            "attention_head_size": trial.suggest_categorical(
+                "attention_head_size",
+                search_spaces_bayesian_optimization["attention_head_size"],
+            ),
+            "dropout": trial.suggest_float(
+                "dropout",
+                *search_spaces_bayesian_optimization["dropout"],
+            ),
+            "learning_rate": trial.suggest_float(
+                "learning_rate",
+                *search_spaces_bayesian_optimization["learning_rate"],
+                log=True,
+            ),
         }
 
         pl.seed_everything(42)
@@ -356,7 +396,7 @@ if __name__ == "__main__":
         sampler=optuna.samplers.TPESampler(seed=42),
     )
 
-    study.optimize(objective, n_trials = n_iter_grid_search)
+    study.optimize(objective, n_trials = n_iter_bayesian)
 
     tempo_bayesian_optimization = time.time() - start_bayesian_optimization
     best_iperparameters_bayesian_optimization = dict(study.best_trial.params)
@@ -437,7 +477,10 @@ if __name__ == "__main__":
 
     for n in feature_sizes_cv:
         selected_features_cv = ranked_features_cv[:n]
-        unknown_reals_sel = [f for f in selected_features_cv if f != "Weekday"] + ["Close_VIX"]
+        unknown_reals_sel = [
+            f for f in selected_features_cv
+            if f not in ("Weekday", "Close_VIX")
+        ] + ["Close_VIX"]
 
         training_sel = TimeSeriesDataSet(
             dataset_h[dataset_h.time_idx <= training_cutoff_idx],
@@ -503,7 +546,8 @@ if __name__ == "__main__":
     print(best_features_cv)
     
     unknown_reals_cv_final = [
-        f for f in best_features_cv if f != "Weekday"
+        f for f in best_features_cv
+        if f not in ("Weekday", "Close_VIX")
     ] + ["Close_VIX"]
 
     training_dataset_cv_final = TimeSeriesDataSet(
@@ -539,7 +583,10 @@ if __name__ == "__main__":
 
     for n in feature_sizes_bo:
         selected_features_bo = ranked_features_bo[:n]
-        unknown_reals_sel = [f for f in selected_features_bo if f != "Weekday"] + ["Close_VIX"]
+        unknown_reals_sel = [
+            f for f in selected_features_bo
+            if f not in ("Weekday", "Close_VIX")
+        ] + ["Close_VIX"]
 
         training_sel = TimeSeriesDataSet(
             dataset_h[dataset_h.time_idx <= training_cutoff_idx],
@@ -605,7 +652,8 @@ if __name__ == "__main__":
     print(best_features_bo)
 
     unknown_reals_bo_final = [
-        f for f in best_features_bo if f != "Weekday"
+        f for f in best_features_bo
+        if f not in ("Weekday", "Close_VIX")
     ] + ["Close_VIX"]
 
     training_dataset_bo_final = TimeSeriesDataSet(
@@ -682,7 +730,7 @@ if __name__ == "__main__":
     ]   
     y_true_backtest_cv.index = y_predicted_backtest_cv.index
     y_true_backtest_cv = y_true_backtest_cv.rename("VIX_Reale")
-    output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\2_TFT\Results"
+    output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
     os.makedirs(output_dir, exist_ok=True)
 
     df_out_cv = pd.DataFrame({"Actual": y_true_backtest_cv, "Forecast": y_predicted_backtest_cv})
@@ -726,7 +774,7 @@ if __name__ == "__main__":
     ).mean() * 100
 
     print("\n--- METRICHE BACKTEST SLIDING WINDOW TFT GRID-SEARCH CV ---")
-    print(f"MSE {orizzonte}:  {mse_cv:.4f}")
+    print(f"MSE:  {mse_cv:.4f}")
     print(f"MAE:  {mae_cv:.4f}")
     print(f"MAPE: {mape_cv:.4f}")
     print(f"R^2:  {r2_cv:.4f}")
@@ -823,7 +871,7 @@ if __name__ == "__main__":
     ).mean() * 100
 
     print("\n--- METRICHE BACKTEST SLIDING WINDOW TFT BAYESIAN OPTIMIZATION ---")
-    print(f"MSE {orizzonte}: {mse_bo:.4f}")
+    print(f"MSE: {mse_bo:.4f}")
     print(f"MAE: {mae_bo:.4f}")
     print(f"MAPE: {mape_bo:.4f}")
     print(f"R^2: {r2_bo:.4f}")
@@ -834,7 +882,7 @@ if __name__ == "__main__":
     # -------------------------------------
     # GRAFICI: VIX REALE vs VIX FORECASTED
     # -------------------------------------
-    output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\2_TFT\Results"
+    output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
     os.makedirs(output_dir_grafici, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(14, 6))

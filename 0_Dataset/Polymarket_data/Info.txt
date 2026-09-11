@@ -1,0 +1,6 @@
+Ogni file python presente in questa cartella ha una sua funzione:
+- I due file "clean_polymarket" e "clean_polymarket_2" puliscono il dataset originale;
+- "download_data_polymarket" scarica i dati di PM;
+- "feature_engineering_polymarket" crea le feature da dare ai modelli partendo dai dati originari di PM.
+
+Il file "dataset_w_polymarket" rappresenta il dataset completo finale composto dal dataset di feature tradizionali + feature di PM.

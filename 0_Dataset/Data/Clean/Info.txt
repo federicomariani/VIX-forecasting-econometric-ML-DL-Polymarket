@@ -1,0 +1,3 @@
+Il file "dataset_adj_x_polymarket" indica il dataset pulito utilizzato per gli altri modelli, ma modificato le date in modo da renderlo della stessa lunghezza del dataset di Polymarket.
+
+Mentre il file "dataset" indica il dataset pulito finale usato per i modelli in questa tesi

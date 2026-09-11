@@ -74,7 +74,7 @@ df_cpi = df_cpi.dropna()
 # MERGE DATASET 
 # --------------
 evento = "df_polymarket"
-output_folder = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\0. Dataset\Polymarket_data\Clean" 
+output_folder = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\Clean" 
 file_output = f"{output_folder}/{evento}.csv"
 
 dataframes = [df_fomc, df_us_recession, df_cpi]
@@ -96,11 +96,11 @@ df_polymarket.to_csv(file_output, index = True)
 # --------------------------------
 # MERGE DATASET PM + TRADIZIONALE
 # --------------------------------
-evento_2 = "df_finale"
-output_folder_2 = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\0. Dataset" 
+evento_2 = "dataset_w_polymarket"
+output_folder_2 = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data" 
 file_output_2 = f"{output_folder_2}/{evento_2}.csv"
 
-df_tradizionale = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\3_Codici\3. Capitolo - Metodologia\0. Dataset\Data\Clean\df_x_polymarket.csv")
+df_tradizionale = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset_adj_x_polymarket.csv")
 df_tradizionale["Date"] = pd.to_datetime(df_tradizionale["Date"], dayfirst=True)
 df_tradizionale.set_index("Date", inplace=True)
 df_tradizionale.sort_index(inplace=True)
@@ -116,3 +116,39 @@ df_finale = df_finale.dropna()
 df_finale = df_finale[~df_finale.index.duplicated(keep="first")]
 
 df_finale.to_csv(file_output_2, index=True)
+
+
+# --------------------------------
+# PERIODI DI SPLIT DEL DATASET BASE
+# --------------------------------
+# I cutoff sono calcolati sul dataset finale, prima degli shift dei modelli.
+n_observations = len(df_finale)
+
+train_end_70 = int(n_observations * 0.70)
+train_70 = df_finale.iloc[:train_end_70]
+test_30 = df_finale.iloc[train_end_70:]
+
+train_end_60 = int(n_observations * 0.60)
+validation_end_70 = int(n_observations * 0.70)
+train_60 = df_finale.iloc[:train_end_60]
+validation_10 = df_finale.iloc[train_end_60:validation_end_70]
+test_30_tft = df_finale.iloc[validation_end_70:]
+
+
+print("\nSPLIT 60% TRAINING / 10% VALIDATION / 30% TEST")
+print(
+    f"Training: {len(train_60)} osservazioni "
+    f"({len(train_60) / n_observations:.2%}) | "
+    f"{train_60.index[0]} - {train_60.index[-1]}"
+)
+print(
+    f"Validation: {len(validation_10)} osservazioni "
+    f"({len(validation_10) / n_observations:.2%}) | "
+    f"{validation_10.index[0]} - {validation_10.index[-1]}"
+)
+print(
+    f"Test: {len(test_30_tft)} osservazioni "
+    f"({len(test_30_tft) / n_observations:.2%}) | "
+    f"{test_30_tft.index[0]} - {test_30_tft.index[-1]}"
+)
+

@@ -14,7 +14,8 @@ from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error,
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from skopt import BayesSearchCV
-from skopt.space import Categorical
+from skopt.space import Categorical, Integer, Real
+
 
 
 # --------------
@@ -29,14 +30,14 @@ device = "cpu"
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
 
 
 # -----------------
 # DATA PREPARATION
 # -----------------
 # Orizzonte di previsione: 1, 5 e 22 giorni 
-orizzonte = 1 # da cambiare manualmente ad ogni run del codice
+orizzonte = 22 # da cambiare manualmente ad ogni run del codice
 
 lookback = 20  # lunghezza della finestra di input 
 
@@ -48,35 +49,65 @@ dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
 target_date_col = f"Target_Date_h{orizzonte}"
 dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
-# Rimuovo le ultime righe che non hanno un target valido (fine serie)
-dataset_h = dataset.dropna(subset=[target_col])
-
 # Predittori completi (17 variabili, come nel modello Random Forest)
-predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_spread",
-              "VIX_lag1", "VIX_lag5", "VIX_lag22", "RSI_14d", "Log_Return_DXY",
-              "Yield_curve", "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", 
-              "VIX_MA20", "Credit_Spread", "Log_Return_Gold", "Weekday"]
+predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", 
+              "OVX_VIX_spread", "Close_VIX", "RSI_14d", "Log_Return_DXY",
+              "Yield_curve", "Log_difference_initial_claims",
+              "Credit_Spread", "Log_Return_Gold", "Weekday"]
 target = [target_col]
 
 
 # ------------------
 # DATA MANIPULATION
 # ------------------
-# Split cronologico (stesse date del modello Random Forest)
-X_training = dataset_h.loc[:"2019-12-31", predittori]
-y_training = dataset_h.loc[:"2019-12-31", target].squeeze()
+# Rimuovo le ultime righe che non hanno un target valido (fine serie)
+dataset_h = dataset.dropna(subset=predittori + [target_col])
 
-X_validation = dataset_h.loc["2020-01-01":"2021-12-31", predittori]
-y_validation = dataset_h.loc["2020-01-01":"2021-12-31", target].squeeze()
+# Suddivisione matrici in training, validation e test set
+X = dataset_h[predittori]
+y = dataset_h[target_col]
 
-X_test = dataset_h.loc["2022-01-01":, predittori]
-y_test = dataset_h.loc["2022-01-01":, target].squeeze()
+n_observations = len(X)
+
+train_end = int(n_observations * 0.60)
+validation_end = int(n_observations * 0.70)
+
+# Date di confine tra gli split
+validation_start_date = dataset_h.index[train_end]
+test_start_date = dataset_h.index[validation_end]
+
+# Maschere di validità del target: non vengono più usate per rimuovere righe dalle feature, ma solo più avanti per decidere quali istanti t siano utilizzabili come target di training/validation
+train_mask = dataset_h[target_date_col] < validation_start_date
+validation_mask = dataset_h[target_date_col] < test_start_date
+
+# Le feature restano complete e continue: nessuna riga viene rimossa qui
+X_training = X.iloc[:train_end]
+y_training = y.iloc[:train_end].squeeze()
+
+X_validation = X.iloc[train_end:validation_end]
+y_validation = y.iloc[train_end:validation_end].squeeze()
+
+X_test = X.iloc[validation_end:]
+y_test = y.iloc[validation_end:].squeeze()
+
+print(f"Training set: {len(X_training)} osservazioni ({len(X_training) / n_observations:.2%})")
+print(f"Validation set: {len(X_validation)} osservazioni ({len(X_validation) / n_observations:.2%})")
+print(f"Test set: {len(X_test)} osservazioni ({len(X_test) / n_observations:.2%})")
+
+for nome, dataset_split in [
+    ("Training", X_training),
+    ("Validation", X_validation),
+    ("Test", X_test)
+]:
+    print(f"\n{nome} set:")
+    print(f"Primo elemento: {dataset_split.index[0]}")
+    print(f"Ultimo elemento: {dataset_split.index[-1]}")
 
 X_train_validation = pd.concat([X_training, X_validation])
 y_train_validation = pd.concat([y_training, y_validation])
 
 
-# ------------------------------
+# -----------------------------
 # DEFINIZIONE DEL MODELLO LSTM 
 # -----------------------------
 class LSTMModel(nn.Module):
@@ -119,26 +150,30 @@ kwargs_comuni = dict(
 scaler_X_fs = RobustScaler()
 scaler_y_fs = RobustScaler()
 scaler_X_fs.fit(X_training)
-scaler_y_fs.fit(y_training.values.reshape(-1, 1))
+scaler_y_fs.fit(y_training[train_mask.iloc[:train_end]].values.reshape(-1, 1))
 
 X_training_scaled_fs = scaler_X_fs.transform(X_training)
 y_training_scaled_fs = scaler_y_fs.transform(y_training.values.reshape(-1, 1)).ravel()
-X_validation_scaled_fs = scaler_X_fs.transform(X_validation)
-y_validation_scaled_fs = scaler_y_fs.transform(y_validation.values.reshape(-1, 1)).ravel()
+X_train_validation_scaled_fs = scaler_X_fs.transform(X_train_validation)
+y_train_validation_scaled_fs = scaler_y_fs.transform(y_train_validation.values.reshape(-1, 1)).ravel()
 
 # Tensorizzazione training (sequenze 3D)
 X_training_seq_fs, y_training_seq_fs = [], []
-for t in range(lookback, len(X_training_scaled_fs)):
-    X_training_seq_fs.append(X_training_scaled_fs[t - lookback:t, :])
+for t in range(lookback - 1, train_end):
+    if not train_mask.iloc[t]:
+        continue
+    X_training_seq_fs.append(X_training_scaled_fs[t - lookback + 1:t + 1, :])
     y_training_seq_fs.append(y_training_scaled_fs[t])
 X_training_seq_fs = np.array(X_training_seq_fs, dtype=np.float32)
 y_training_seq_fs = np.array(y_training_seq_fs, dtype=np.float32).reshape(-1, 1)
 
 # Tensorizzazione validation (sequenze 3D)
 X_validation_seq_fs, y_validation_seq_fs = [], []
-for t in range(lookback, len(X_validation_scaled_fs)):
-    X_validation_seq_fs.append(X_validation_scaled_fs[t - lookback:t, :])
-    y_validation_seq_fs.append(y_validation_scaled_fs[t])
+for t in range(train_end, len(X_train_validation_scaled_fs)):
+    if not validation_mask.iloc[t]:
+        continue
+    X_validation_seq_fs.append(X_train_validation_scaled_fs[t - lookback + 1:t + 1, :])
+    y_validation_seq_fs.append(y_train_validation_scaled_fs[t])
 X_validation_seq_fs = np.array(X_validation_seq_fs, dtype=np.float32)
 y_validation_seq_fs = np.array(y_validation_seq_fs, dtype=np.float32).reshape(-1, 1)
 
@@ -187,34 +222,33 @@ print("RANKING PERMUTATION IMPORTANCE (LSTM)")
 print(ranking)
 
 
-# -------------------
-# SCALING DEFINITIVO
-# -------------------
-# Fit una sola volta su train + validation, riutilizzato invariato per tutto il backtest (per via dell'elevato costo computazionale di rifarlo ad ogni iterazione del backtest)
-scaler_X = RobustScaler()
-scaler_y = RobustScaler()
-scaler_X.fit(X_train_validation)
-scaler_y.fit(y_train_validation.values.reshape(-1, 1))
-
-X_train_validation_scaled = scaler_X.transform(X_train_validation)
-y_train_validation_scaled = scaler_y.transform(y_train_validation.values.reshape(-1, 1)).ravel()
-
-
 # ---------------------------------------------------
 # TENSORIZZAZIONE TRAIN + VALIDATION (per il tuning)
 # ---------------------------------------------------
+# Costruiamo le sequenze mantenendo intera la storia delle feature (nessun buco):
+# le maschere decidono solo se un istante t è un target valido e a quale fold
+# appartiene, non se una riga di feature va rimossa
 X_tv_seq, y_tv_seq = [], []
-for t in range(lookback, len(X_train_validation_scaled)):
-    X_tv_seq.append(X_train_validation_scaled[t - lookback:t, :])
-    y_tv_seq.append(y_train_validation_scaled[t])
+test_fold = []
+
+for t in range(lookback - 1, len(X_train_validation_scaled_fs)): 
+    if t < train_end:
+        if not train_mask.iloc[t]:
+            continue
+        fold_label = -1
+    else:
+        if not validation_mask.iloc[t]:
+            continue
+        fold_label = 0
+
+    X_tv_seq.append(X_train_validation_scaled_fs[t - lookback + 1: t + 1, :])
+    y_tv_seq.append(y_train_validation_scaled_fs[t])
+    test_fold.append(fold_label)
+
 X_tv_seq = np.array(X_tv_seq, dtype=np.float32)
 y_tv_seq = np.array(y_tv_seq, dtype=np.float32).reshape(-1, 1)
+test_fold = np.array(test_fold)
 
-# PredefinedSplit sulle sequenze (le prime "lookback" righe di training si perdono)
-test_fold = np.concatenate([
-    np.full(len(X_training) - lookback, -1),
-    np.full(len(X_validation), 0),
-])
 ps = PredefinedSplit(test_fold)
 
 
@@ -225,7 +259,7 @@ param_grid_cross_validation = {
     "module__hidden_size": [8, 16, 32],
     "module__num_layers": [1, 2],
     "module__dropout": [0.2, 0.3],
-    "optimizer__lr": [0.001, 0.0001],
+    "optimizer__lr": [0.0001, 0.001],
     "batch_size": [16, 32],
 }
 
@@ -261,12 +295,21 @@ print("TEMPO DI TUNING GRID-SEARCH CV:", tempo_grid_search)
 # BAYESIAN OPTIMIZATION IPERPARAMETRI
 # ------------------------------------
 search_spaces_bayesian_optimization = {
-    "module__hidden_size": Categorical([8, 16, 32]),
+    "module__hidden_size": Integer(8, 32),
     "module__num_layers": Categorical([1, 2]),
-    "module__dropout": Categorical([0.2, 0.3]),
-    "optimizer__lr": Categorical([0.001, 0.0001]),
+    "module__dropout": Real(0.2, 0.3, prior="uniform"),
+    "optimizer__lr": Real(0.0001, 0.001, prior="log-uniform"),
     "batch_size": Categorical([16, 32]),
 }
+
+n_iter_bayesian = 50
+
+lstm_wrapper = NeuralNetRegressor(
+    module=LSTMModel,
+    module__input_size=len(predittori),
+    max_epochs=50,
+    **kwargs_comuni,
+)
 
 start_bayesian_optimization = time.time()
 
@@ -275,7 +318,7 @@ bayesian_optimization = BayesSearchCV(
     search_spaces=search_spaces_bayesian_optimization,
     scoring="neg_mean_squared_error",
     cv=ps,
-    n_iter=n_iter_grid_search,
+    n_iter=n_iter_bayesian,
     n_jobs=1,
     random_state=42,
     verbose=2,
@@ -288,6 +331,19 @@ best_iperparameters_bayesian_optimization = dict(bayesian_optimization.best_para
 print("MIGLIORI IPERPARAMETRI BAYESIAN OPTIMIZATION:", best_iperparameters_bayesian_optimization)
 print("TEMPO DI TUNING BAYESIAN OPTIMIZATION:", tempo_bayesian_optimization)
 
+
+# ------------------------
+# SCALING PER IL BACKTEST
+# ------------------------
+# Fit su training + validation, tenuto fisso per tutta la sliding window per motivi di costo computazionale
+scaler_X = RobustScaler()
+scaler_y = RobustScaler()
+scaler_X.fit(X_train_validation)
+train_valid_mask_for_scaling = pd.concat([
+    train_mask.iloc[:train_end],
+    validation_mask.iloc[train_end:validation_end],
+])
+scaler_y.fit(y_train_validation[train_valid_mask_for_scaling].values.reshape(-1, 1))
 
 # ------------------------------------------------------------------
 # PREPARAZIONE DATI PER IL BACKTEST (scaler fissato, non rifittato)
@@ -309,6 +365,7 @@ n_test = len(X_test)
 # ---------------------------------------------------------------
 y_predicted_list_cv = []
 dates_predicted_cv = []
+vix_origin_list_cv = [] 
 
 start = time.time()
 
@@ -317,20 +374,24 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
 
-    train_window_X_scaled = X_all_scaled[i: i + n_train + n_validation]
-    train_window_y_scaled = y_all_scaled[i: i + n_train + n_validation]
-
-    # Tensorizzazione della finestra di training corrente
+    # Solo target osservabili ad oggi, per evitare leakage
+    target_idx = i + n_train + n_validation
+    train_end = target_idx - orizzonte + 1  # estremo escluso
+    train_window_X_scaled = X_all_scaled[i: train_end]
+    train_window_y_scaled = y_all_scaled[i: train_end]
+    
+    vix_origin_list_cv.append(dataset_h.loc[X_all.index[target_idx], "Close_VIX"]) # salvo VIX di origine
+              
+    # Finestra t termina in t incluso, non più quindi in t-1
     X_window_seq, y_window_seq = [], []
-    for t in range(lookback, len(train_window_X_scaled)):
-        X_window_seq.append(train_window_X_scaled[t - lookback:t, :])
+    for t in range(lookback - 1, len(train_window_X_scaled)):
+        X_window_seq.append(train_window_X_scaled[t - lookback + 1: t + 1, :])
         y_window_seq.append(train_window_y_scaled[t])
     X_window_seq = np.array(X_window_seq, dtype=np.float32)
     y_window_seq = np.array(y_window_seq, dtype=np.float32).reshape(-1, 1)
-
-    target_idx = i + n_train + n_validation
-    X_new_seq = X_all_scaled[target_idx - lookback: target_idx, :].reshape(1, lookback, len(predittori)).astype(np.float32)
-
+            
+    X_new_seq = X_all_scaled[target_idx - lookback + 1:target_idx + 1, :].reshape(1, lookback, len(predittori)).astype(np.float32) 
+    
     lstm_cv_backtest = NeuralNetRegressor(
         module=LSTMModel,
         module__input_size=len(predittori),
@@ -354,8 +415,10 @@ y_true_backtest_cv = pd.Series(
     name="VIX_Reale",
 )
 
+y_vix_origin_cv = pd.Series(vix_origin_list_cv, index=dates_predicted_cv, name="VIX_Origine")
+
 # Cartella comune dove vengono salvati i risultati
-output_dir = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\1_LSTM\Results"
+output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
 os.makedirs(output_dir, exist_ok=True)
 
 df_out_cv = pd.DataFrame({
@@ -375,9 +438,9 @@ mape_cv = mean_absolute_percentage_error(y_true_backtest_cv, y_predicted_backtes
 r2_cv = r2_score(y_true_backtest_cv, y_predicted_backtest_cv)
 qlike_cv = np.mean((y_true_backtest_cv / y_predicted_backtest_cv) - np.log(y_true_backtest_cv / y_predicted_backtest_cv) - 1)
 
-actual_direction_cv = np.sign(y_true_backtest_cv.diff())
-predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_true_backtest_cv.shift(1))
-directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).iloc[1:].mean() * 100
+actual_direction_cv = np.sign(y_true_backtest_cv - y_vix_origin_cv)
+predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_vix_origin_cv)
+directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM GRID-SEARCH CV ---")
 print(f"MSE {orizzonte}:  {mse_cv:.4f}")
@@ -393,6 +456,7 @@ print(f"Directional Accuracy: {directional_accuracy_cv:.2f}%")
 # -----------------------------------------------------------------------
 y_predicted_list_bo = []
 dates_predicted_bo = []
+vix_origin_list_bo = []
 
 start = time.time()
 
@@ -401,18 +465,23 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
 
-    train_window_X_scaled = X_all_scaled[i: i + n_train + n_validation]
-    train_window_y_scaled = y_all_scaled[i: i + n_train + n_validation]
-
+    # Solo target osservabili ad oggi, per evitare leakage
+    target_idx = i + n_train + n_validation
+    train_end = target_idx - orizzonte + 1  # estremo escluso
+    train_window_X_scaled = X_all_scaled[i: train_end]
+    train_window_y_scaled = y_all_scaled[i: train_end]
+    
+    vix_origin_list_bo.append(dataset_h.loc[X_all.index[target_idx], "Close_VIX"])
+                
+    # Finestra t termina in t incluso, non più quindi in t-1
     X_window_seq, y_window_seq = [], []
-    for t in range(lookback, len(train_window_X_scaled)):
-        X_window_seq.append(train_window_X_scaled[t - lookback:t, :])
+    for t in range(lookback - 1, len(train_window_X_scaled)):
+        X_window_seq.append(train_window_X_scaled[t - lookback + 1: t + 1, :])
         y_window_seq.append(train_window_y_scaled[t])
     X_window_seq = np.array(X_window_seq, dtype=np.float32)
     y_window_seq = np.array(y_window_seq, dtype=np.float32).reshape(-1, 1)
-
-    target_idx = i + n_train + n_validation
-    X_new_seq = X_all_scaled[target_idx - lookback: target_idx, :].reshape(1, lookback, len(predittori)).astype(np.float32)
+                
+    X_new_seq = X_all_scaled[target_idx - lookback + 1:target_idx + 1, :].reshape(1, lookback, len(predittori)).astype(np.float32) 
 
     lstm_bo_backtest = NeuralNetRegressor(
         module=LSTMModel,
@@ -436,12 +505,16 @@ y_true_backtest_bo = pd.Series(
     name="VIX_Reale",
 )
 
+y_vix_origin_bo = pd.Series(vix_origin_list_bo, index=dates_predicted_bo, name="VIX_Origine")
+
 df_out_bo = pd.DataFrame({
     "Actual": y_true_backtest_bo,
     "Forecast": y_predicted_backtest_bo
 })
 df_out_bo.index.name = "Date"
-df_out_bo.to_csv(os.path.join(output_dir, f"lstm_bayesoptimization_h{orizzonte}.csv"))
+output_file_bo = os.path.join(output_dir, f"lstm_bayesoptimization_h{orizzonte}.csv")
+os.makedirs(os.path.dirname(output_file_bo), exist_ok=True)
+df_out_bo.to_csv(output_file_bo)
 
 
 # ------------------------
@@ -453,9 +526,9 @@ mape_bo = mean_absolute_percentage_error(y_true_backtest_bo, y_predicted_backtes
 r2_bo = r2_score(y_true_backtest_bo, y_predicted_backtest_bo)
 qlike_bo = np.mean((y_true_backtest_bo / y_predicted_backtest_bo) - np.log(y_true_backtest_bo / y_predicted_backtest_bo) - 1)
 
-actual_direction_bo = np.sign(y_true_backtest_bo.diff())
-predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_true_backtest_bo.shift(1))
-directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).iloc[1:].mean() * 100
+actual_direction_bo = np.sign(y_true_backtest_bo - y_vix_origin_bo)
+predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_vix_origin_bo)
+directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).mean() * 100
 
 print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM BAYESIAN OPTIMIZATION ---")
 print(f"MSE {orizzonte}: {mse_bo:.4f}")
@@ -481,7 +554,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 fig.autofmt_xdate(rotation=45)
 
-output_dir_grafici = r"C:\Users\fede1\OneDrive - Università degli Studi di Macerata\2_Tesi\Repo\4_Deep_Learning\1_LSTM\Results"
+output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
