@@ -16,7 +16,7 @@ This study compares forecasting models for the CBOE Volatility Index (VIX) belon
 
 The models are evaluated across three forecasting horizons (**1, 5, and 22 days**), using the same time period for all models.
 
-An original contribution of this thesis is the integration of features derived from prediction markets (**Polymarket** - FOMC interest rate decisions, US recession probabilities, and year-over-year CPI inflation) into the econometric, Machine Learning, and Deep Learning models, in order to assess whether the probabilities implied by these markets provide additional useful information for forecasting. For each model, two runs are therefore performed: **“with PM”** and **“without PM”**, which are then compared against each other.
+An original contribution of this paper is the integration of features derived from prediction markets (**Polymarket** - FOMC interest rate decisions, US recession probabilities, and year-over-year CPI inflation) into the econometric, Machine Learning, and Deep Learning models, in order to assess whether the probabilities implied by these markets provide additional useful information for forecasting. For each model, two runs are therefore performed: **“with PM”** and **“without PM”**, which are then compared against each other.
 
 The models are optimized using both **Grid Search** and **Bayesian Optimization** and evaluated using point forecast accuracy metrics (MSE, MAE, MAPE, R², and QLIKE), Directional Accuracy, **Diebold–Mariano tests**, and the **Model Confidence Set (MCS)** procedure. The analysis is also conducted across different volatility regimes (**Low / Medium / High**).
 
