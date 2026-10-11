@@ -1,7 +1,7 @@
 from xgboost import XGBRegressor
 import pandas as pd
 import numpy as np
-np.int = int # serve per permettere a skop di funzionare
+np.int = int # required for skopt to work
 
 import shap
 import os
@@ -9,7 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error,
 import matplotlib.pyplot as plt
 import time
 import matplotlib.dates as mdates
-from skopt.space import Categorical, Integer, Real # per Bayesian Optimization
+from skopt.space import Categorical, Integer, Real # for Bayesian Optimization
 from skopt import BayesSearchCV
 from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid 
 
@@ -24,32 +24,32 @@ dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset
 # -----------------
 # DATA PREPARATION
 # -----------------
-# Orizzonte di previsione 1, 5 e 22 giorni
-orizzonte = 1 # da cambiare ad ogni run
+# Forecast horizons: 1, 5, and 22 days
+orizzonte = 1 # change for each run
 
-# Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
+# Create the target shifted forward by h days (direct multi-step forecast)
 target_col = f"Close_VIX_h{orizzonte}"
 dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
 
-# La riga conserva la data delle feature; il target h-step appartiene invece alla data osservata h righe dopo. La conserviamo per etichettare correttamente previsioni e valori reali nei risultati del backtest
+# The row retains the feature date; the h-step target belongs to the date observed h rows later. We retain it to correctly label forecasts and actual values in the backtest results.
 target_date_col = f"Target_Date_h{orizzonte}"
 dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
-# Rimuovo le ultime righe che non hanno un target valido (fine serie)
+# Remove the last rows that do not have a valid target (end of series)
 dataset_h = dataset.dropna(subset=[target_col])
 
-# Creazione matrice variabili indipendenti e vettore variabile dipendente 
+# Create the independent-variable matrix and dependent-variable vector 
 predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_spread",
               "VIX_lag1", "VIX_lag5", "VIX_lag22", "RSI_14d", "Log_Return_DXY",
               "Yield_curve", "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", "VIX_MA22",
               "Credit_Spread", "Log_Return_Gold", "Weekday"] 
-target = [target_col] # Variabile dipendente
+target = [target_col] # Dependent variable
 
 
 # ------------------
 # DATA MANIPULATION
 # ------------------
-# Suddivisione matrici in training, validation e test set
+# Split the matrices into training, validation, and test sets
 X = dataset_h[predittori]
 y = dataset_h[target_col]
 
@@ -66,9 +66,9 @@ y_training = y.iloc[:train_end].squeeze()
 y_validation = y.iloc[train_end:validation_end].squeeze()
 y_test = y.iloc[validation_end:].squeeze()
 
-print(f"Training set: {len(X_training)} osservazioni ({len(X_training) / n_observations:.2%})")
-print(f"Validation set: {len(X_validation)} osservazioni ({len(X_validation) / n_observations:.2%})")
-print(f"Test set: {len(X_test)} osservazioni ({len(X_test) / n_observations:.2%})")
+print(f"Training set: {len(X_training)} observations ({len(X_training) / n_observations:.2%})")
+print(f"Validation set: {len(X_validation)} observations ({len(X_validation) / n_observations:.2%})")
+print(f"Test set: {len(X_test)} observations ({len(X_test) / n_observations:.2%})")
 
 for nome, dataset_split in [
     ("Training", X_training),
@@ -76,26 +76,26 @@ for nome, dataset_split in [
     ("Test", X_test)
 ]:
     print(f"\n{nome} set:")
-    print(f"Primo elemento: {dataset_split.index[0]}")
-    print(f"Ultimo elemento: {dataset_split.index[-1]}")
+    print(f"First observation: {dataset_split.index[0]}")
+    print(f"Last observation: {dataset_split.index[-1]}")
 
-# Unione del train e del validation set in quanto richiesto da PredefinedSplit 
+# Combine the training and validation sets as required by PredefinedSplit 
 X_train_validation = pd.concat([X_training, X_validation])
 y_train_validation = pd.concat([y_training, y_validation])
 
-# Si dice a PredefinedSplit quali righe usare per fare training del modello (-1) e quali per validation (0)
+# Tell PredefinedSplit which rows to use for model training (-1) and which for validation (0)
 test_fold = np.concatenate([
-    np.full(len(X_training), -1),      # righe di training --> escluse dalla validazione
-    np.full(len(X_validation), 0)   # righe di validation --> usate per validare
+    np.full(len(X_training), -1),      # training rows --> excluded from validation
+    np.full(len(X_validation), 0)   # validation rows --> used for validation
 ])
 
 ps = PredefinedSplit(test_fold)
 
 
-# ------------------------------------------------------------------------
-# SELEZIONE FEATURES TRAMITE BACKWARD FEATURE SELECTION (GUIDATA DA SHAP)
-# ------------------------------------------------------------------------
-# Features rankate da SHAP 
+# ----------------------------------------------------------------------
+# FEATURE SELECTION THROUGH BACKWARD FEATURE SELECTION (GUIDED BY SHAP)
+# ----------------------------------------------------------------------
+# Features ranked by SHAP
 model = XGBRegressor(
     random_state = 42,
     n_estimators = 200,
@@ -121,17 +121,17 @@ importance = importance.sort_values(
     ascending=False
 )
 
-print("FEATURES RANKATE DA SHAP")
+print("FEATURES RANKED BY SHAP")
 print(importance)
 
-# Features scelte tramite metodo Backward Feature Selection guidata da shap
+# Features selected through the SHAP-guided backward feature selection method
 ranked_features = importance["Feature"].tolist()
 print(ranked_features)
 
 
-# ------------------------------------------
-# GRID SEARCH CV OPTIMIZATION IPERPARAMETRI
-# ------------------------------------------
+# -------------------------------------------
+# GRID SEARCH CV HYPERPARAMETER OPTIMIZATION
+# -------------------------------------------
 param_grid_cross_validation = {
     "n_estimators": [100, 200, 300, 400, 500],
     "max_depth": [3, 4, 5, 6, 7],
@@ -162,13 +162,13 @@ grid_search.fit(X_train_validation, y_train_validation)
 tempo_grid_search = time.time() - start_cross_validation
 best_iperparameters_cross_validation = grid_search.best_params_
 
-print("Migliori iperparametri Grid-Search CV:", best_iperparameters_cross_validation)
-print("Tempo di tuning di Grid-Search CV:", tempo_grid_search)
+print("BEST GRID-SEARCH CV HYPERPARAMETERS:", best_iperparameters_cross_validation)
+print("GRID-SEARCH CV TUNING TIME:", tempo_grid_search)
 
 
-# ------------------------------------
-# BAYESIAN OPTIMIZATION IPERPARAMETRI
-# ------------------------------------
+# --------------------------------------
+# BAYESIAN OPTIMIZATION HYPERPARAMETERS
+# --------------------------------------
 search_spaces_bayesian_optimization = {
     "n_estimators": Integer(100, 500),
     "max_depth": Integer(3, 7),
@@ -205,14 +205,14 @@ bayesian_optimization.fit(X_train_validation, y_train_validation)
 tempo_bayesian_optimization = time.time() - start_bayesian_optimization
 best_iperparameters_bayesian_optimization = dict(bayesian_optimization.best_params_)
 
-print("Migliori iperparametri Bayesian Optimization:", best_iperparameters_bayesian_optimization) 
-print("Tempo di tuning di Bayesian Optimization:", tempo_bayesian_optimization)
+print("BEST BAYESIAN OPTIMIZATION HYPERPARAMETERS:", best_iperparameters_bayesian_optimization) 
+print("BAYESIAN OPTIMIZATION TUNING TIME:", tempo_bayesian_optimization)
 
 
 # ------------
-# SHAP VALUES 
+# SHAP VALUES
 # ------------
-# Features rankate da shap dopo ottimizzazione Grid Search CV
+# Features ranked by SHAP after Grid Search CV optimization
 model_cv = XGBRegressor(
     **grid_search.best_params_,
     objective="reg:pseudohubererror",
@@ -235,10 +235,10 @@ importance_cv = importance_cv.sort_values(
     ascending=False
 )
 
-print("FEATURES RANKATE DA SHAP DOPO OTTIMIZZAZIONE GRID SEARCH CV")
+print("FEATURES RANKED BY SHAP AFTER GRID SEARCH CV OPTIMIZATION")
 print(importance_cv)
 
-# Features rankate da shap dopo Bayesian Optimization 
+# Features ranked by SHAP after Bayesian Optimization 
 model_bo = XGBRegressor(
     **best_iperparameters_bayesian_optimization,
     objective="reg:pseudohubererror",
@@ -261,21 +261,21 @@ importance_bo = importance_bo.sort_values(
     ascending=False
 )
 
-print("FEATURES RANKATE DA SHAP DOPO BAYESIAN OPTIMIZATION")
+print("FEATURES RANKED BY SHAP AFTER BAYESIAN OPTIMIZATION")
 print(importance_bo)
 
 
-# ------------------------------------------------------------------------------
-# SELEZIONE FEATURES TRAMITE METODO BACKWARD FEATURE SELECTION (GUIDATA DA SHAP)
-# ------------------------------------------------------------------------------
-# Selezione features da shap dopo Grid Search CV
+# ----------------------------------------------------------------------
+# FEATURE SELECTION THROUGH BACKWARD FEATURE SELECTION (GUIDED BY SHAP)
+# ----------------------------------------------------------------------
+# Select features based on SHAP after Grid Search CV
 ranked_features_cv = importance_cv["Feature"].tolist()
 feature_sizes_cv = list(range(17, 4, -1)) # 17 = feature meno importante
 
 results_features_cv = []
 
 for n in feature_sizes_cv:
-    # prendo le n migliori feature secondo SHAP
+    # Select the top n features according to SHAP
     selected_features_cv = ranked_features_cv[:n]
 
     X_training_selected = X_training[selected_features_cv]
@@ -308,7 +308,7 @@ for n in feature_sizes_cv:
 
 results_features_cv = pd.DataFrame(results_features_cv)
 
-print("FEATURES SELEZIONATE DA SHAP DOPO OTTIMIZZAZIONE GRID SEARCH CV")
+print("FEATURES SELECTED BY SHAP AFTER GRID SEARCH CV OPTIMIZATION")
 print(results_features_cv[[
     "Numero_feature",
     "RMSE",
@@ -323,14 +323,14 @@ best_features_cv = results_features_cv.loc[
 
 print(best_features_cv)
 
-# Selezione features da SHAP dopo Bayesian Optimization
+# Select features based on SHAP after Bayesian Optimization
 ranked_features_bo = importance_bo["Feature"].tolist()
 feature_sizes_bo = list(range(17, 4, -1))
 
 results_features_bo = []
 
 for n in feature_sizes_bo:
-    # prendo le n migliori feature secondo SHAP
+    # Select the top n features according to SHAP
     selected_features_bo = ranked_features_bo[:n]
 
     X_training_selected = X_training[selected_features_bo]
@@ -363,7 +363,7 @@ for n in feature_sizes_bo:
 
 results_features_bo = pd.DataFrame(results_features_bo)
 
-print("FEATURES SELEZIONATE DA SHAP DOPO BAYESIAN OPTIMIZATION")
+print("FEATURES SELECTED BY SHAP AFTER BAYESIAN OPTIMIZATION")
 print(results_features_bo[[
     "Numero_feature",
     "RMSE",
@@ -382,7 +382,7 @@ print(best_features_bo)
 # ----------------------------------------------------------------
 # SLIDING WINDOW BACKTEST (WALK-FORKWARD FORECAST) GRID-SEARCH CV
 # ----------------------------------------------------------------
-# Si riuniscono i tre dataset in maniera cronologica per poter effettuare quesa tipologia di backtest
+# Combine the three datasets in chronological order to perform this type of backtest
 X_all = pd.concat([X_training, X_validation, X_test])
 y_all = pd.concat([y_training, y_validation, y_test])
 target_dates_all = dataset_h.loc[X_all.index, target_date_col]
@@ -392,7 +392,7 @@ n_validation = len(X_validation)
 n_test = len(X_test)
 
 
-# Inizio ciclo for del backtest. cv = Cross Validation
+# Start the backtest loop. cv = Cross Validation
 y_predicted_list_cv = []
 dates_predicted_cv = []
 
@@ -401,11 +401,11 @@ start = time.time()
 for i in range(n_test):
     if i % 10 == 0:
         elapsed = time.time() - start
-        print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
+        print(f"Iteration {i}/{n_test} - {elapsed:.1f} s")
     
     target_idx = i + n_train + n_validation
     
-    # Sono utilizzabili solo le coppie X(tau), y(tau+h) il cui target è già osservabile alla data di origine target_idx
+    # Only pairs X(tau), y(tau+h) whose target is already observable at the origin date target_idx are usable
     train_end = target_idx - orizzonte + 1
     train_window_X = X_all.iloc[i:train_end][best_features_cv]
     train_window_y = y_all.iloc[i:train_end]
@@ -425,7 +425,7 @@ for i in range(n_test):
     y_predicted_list_cv.append(pred_cv)
     dates_predicted_cv.append(target_dates_all.iloc[target_idx])
 
-# Riallineamento valori previsti y con date
+# Align predicted y values with dates
 y_predicted_backtest_cv = pd.Series(y_predicted_list_cv, index=dates_predicted_cv, name="VIX_Forecasted")
 y_true_backtest_cv = pd.Series(
     y_all.iloc[n_train + n_validation:].to_numpy(),
@@ -433,11 +433,11 @@ y_true_backtest_cv = pd.Series(
     name="VIX_Reale",
 )
 
-# Cartella comune dove tutti i file-modello salvano i risultati
+# Common folder where all model files save their results
 output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
 os.makedirs(output_dir, exist_ok=True)
 
-# Salvo previsioni + valori reali, per la variante Grid-Search per fare poi Model Confidence Set e Diebold-Mariano test
+# Save forecasts and actual values for the Grid Search variant, for subsequent Model Confidence Set and Diebold-Mariano tests
 df_out_cv = pd.DataFrame({
     "Actual": y_true_backtest_cv,
     "Forecast": y_predicted_backtest_cv
@@ -446,9 +446,9 @@ df_out_cv.index.name = "Date"
 df_out_cv.to_csv(os.path.join(output_dir, f"xgboost_gridsearch_h{orizzonte}.csv"))
 
 
-# ------------------------
-# CALCOLO METRICHE ERRORE
-# ------------------------
+# --------------------------
+# ERROR METRICS CALCULATION
+# --------------------------
 mse_cv = mean_squared_error(y_true_backtest_cv, y_predicted_backtest_cv)
 mae_cv = mean_absolute_error(y_true_backtest_cv, y_predicted_backtest_cv)
 mape_cv = mean_absolute_percentage_error(y_true_backtest_cv, y_predicted_backtest_cv)
@@ -459,7 +459,7 @@ actual_direction_cv = np.sign(y_true_backtest_cv.diff())
 predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_true_backtest_cv.shift(1))
 directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).iloc[1:].mean() * 100
 
-print("\n--- METRICHE BACKTEST SLIDING WINDOW XGBOOST GRID-SEARCH CV ---")
+print("\n--- XGBOOST GRID SEARCH CV SLIDING WINDOW BACKTEST METRICS ---")
 print(f"MSE:  {mse_cv:.4f}")
 print(f"MAE:  {mae_cv:.4f}")
 print(f"MAPE: {mape_cv:.4f}")
@@ -470,7 +470,7 @@ print(f"Directional Accuracy: {directional_accuracy_cv:.2f}%")
 # -----------------------------------------------------------------------
 # SLIDING WINDOW BACKTEST (WALK-FORKWARD FORECAST) BAYESIAN OPTIMIZATION
 # -----------------------------------------------------------------------
-# Inizio ciclo for del backtest. bo = Bayesian Optimization
+# Start the backtest loop. bo = Bayesian Optimization
 y_predicted_list_bo = []
 dates_predicted_bo = []
 
@@ -479,11 +479,11 @@ start = time.time()
 for i in range(n_test):
     if i % 10 == 0:
         elapsed = time.time() - start
-        print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
+        print(f"Iteration {i}/{n_test} - {elapsed:.1f} s")
     
     target_idx = i + n_train + n_validation
-    # Sono utilizzabili solo le coppie X(tau), y(tau+h) il cui target
-    # è già osservabile alla data di origine target_idx.
+    # Only pairs X(tau), y(tau+h) whose target
+    # is already observable at the origin date target_idx.
     train_end = target_idx - orizzonte + 1
     train_window_X = X_all.iloc[i:train_end][best_features_bo]
     train_window_y = y_all.iloc[i:train_end]
@@ -503,7 +503,7 @@ for i in range(n_test):
     y_predicted_list_bo.append(pred_bo)
     dates_predicted_bo.append(target_dates_all.iloc[target_idx])
 
-# Riallineamento valori previsti y con date
+# Align predicted y values with dates
 y_predicted_backtest_bo = pd.Series(y_predicted_list_bo, index=dates_predicted_bo, name="VIX_Forecasted")
 y_true_backtest_bo = pd.Series(
     y_all.iloc[n_train + n_validation:].to_numpy(),
@@ -511,7 +511,7 @@ y_true_backtest_bo = pd.Series(
     name="VIX_Reale",
 )
 
-# Salvo previsioni + valori reali, per la variante Bayesian Optimization
+# Save forecasts and actual values for the Bayesian Optimization variant
 df_out_bo = pd.DataFrame({
     "Actual": y_true_backtest_bo,
     "Forecast": y_predicted_backtest_bo
@@ -520,9 +520,9 @@ df_out_bo.index.name = "Date"
 df_out_bo.to_csv(os.path.join(output_dir, f"xgboost_bayesoptimization_h{orizzonte}.csv"))
 
 
-# ------------------------
-# CALCOLO METRICHE ERRORE
-# ------------------------
+# --------------------------
+# ERROR METRICS CALCULATION
+# --------------------------
 mse_bo = mean_squared_error(y_true_backtest_bo, y_predicted_backtest_bo)
 mae_bo = mean_absolute_error(y_true_backtest_bo, y_predicted_backtest_bo)
 mape_bo = mean_absolute_percentage_error(y_true_backtest_bo, y_predicted_backtest_bo)
@@ -533,7 +533,7 @@ actual_direction_bo = np.sign(y_true_backtest_bo.diff())
 predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_true_backtest_bo.shift(1))
 directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).iloc[1:].mean() * 100
 
-print("\n--- METRICHE BACKTEST SLIDING WINDOW XGBOOST BAYESIAN OPTIMIZATION ---")
+print("\n--- XGBOOST BAYESIAN OPTIMIZATION SLIDING WINDOW BACKTEST METRICS ---")
 print(f"MSE: {mse_bo:.4f}")
 print(f"MAE: {mae_bo:.4f}")
 print(f"MAPE: {mape_bo:.4f}")
@@ -543,27 +543,27 @@ print(f"Directional Accuracy: {directional_accuracy_bo:.2f}%")
 
 
 # -------------------------------------
-# GRAFICI: VIX REALE vs VIX FORECASTED  
+# PLOTS: ACTUAL VIX VS FORECASTED VIX  
 # -------------------------------------
 output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
-# Grafico con ottimizzazione Grid-Search CV
-# Riportare l'indice in formato datetime (per asse delle x leggibile) 
+# Plot with Grid Search CV optimization
+# Convert the index to datetime format (for a readable x-axis) 
 y_true_backtest_cv.index = pd.to_datetime(y_true_backtest_cv.index)
 y_predicted_backtest_cv.index = pd.to_datetime(y_predicted_backtest_cv.index)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
-ax.plot(y_true_backtest_cv.index, y_true_backtest_cv, label="VIX Reale", color="black", linewidth=1.2)
-ax.plot(y_predicted_backtest_cv.index, y_predicted_backtest_cv, label="VIX Previsto (XGBoost)", color="red", linewidth=1.2, alpha=0.8)
+ax.plot(y_true_backtest_cv.index, y_true_backtest_cv, label="Actual VIX", color="black", linewidth=1.2)
+ax.plot(y_predicted_backtest_cv.index, y_predicted_backtest_cv, label="Forecast VIX (XGBoost)", color="red", linewidth=1.2, alpha=0.8)
 
-ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # un tick ogni mese
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # formato tipo "Gen 2022"
-fig.autofmt_xdate(rotation=45)                                # ruota le etichette per non sovrapporle
+ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # one tick per month
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # format like "Jan 2022"
+fig.autofmt_xdate(rotation=45)                                # rotate labels to prevent overlap
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
-ax.set_xlabel("Data")
+ax.set_title(f"Actual VIX vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
+ax.set_xlabel("Date")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
@@ -571,22 +571,22 @@ plt.savefig(os.path.join(output_dir_grafici, f"xgboost_CV_vix_reale_vs_previsto_
 plt.show()
 
 
-# Grafico con Bayesian Optimization
-# Riportare l'indice in formato datetime (per asse delle x leggibile) 
+# Plot with Bayesian Optimization
+# Convert the index to datetime format (for a readable x-axis) 
 y_true_backtest_bo.index = pd.to_datetime(y_true_backtest_bo.index)
 y_predicted_backtest_bo.index = pd.to_datetime(y_predicted_backtest_bo.index)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
-ax.plot(y_true_backtest_bo.index, y_true_backtest_bo, label="VIX Reale", color="black", linewidth=1.2)
-ax.plot(y_predicted_backtest_bo.index, y_predicted_backtest_bo, label="VIX Previsto (XGBoost)", color="red", linewidth=1.2, alpha=0.8)
+ax.plot(y_true_backtest_bo.index, y_true_backtest_bo, label="Actual VIX", color="black", linewidth=1.2)
+ax.plot(y_predicted_backtest_bo.index, y_predicted_backtest_bo, label="Forecast VIX (XGBoost)", color="red", linewidth=1.2, alpha=0.8)
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))  
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   
 fig.autofmt_xdate(rotation=45)                                
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
-ax.set_xlabel("Data")
+ax.set_title(f"Actual VIX vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
+ax.set_xlabel("Date")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()

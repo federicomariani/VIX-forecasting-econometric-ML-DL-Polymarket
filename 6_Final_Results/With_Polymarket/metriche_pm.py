@@ -8,8 +8,8 @@ from pathlib import Path
 # ---------------
 # IMPORT DATASET
 # ---------------
-# Cambiare cartella ogni volta che si runna un orizzonte (h) diverso
-orizzonte = 22 # Da cambiare ad ogni run (1, 5, 22)
+# Change the folder each time you run a different forecast horizon (h)
+orizzonte = 22 # Change on each run (1, 5, or 22)
 
 folders = [
     Path(rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Modelli_econometrici\h{orizzonte}"),
@@ -18,10 +18,9 @@ folders = [
 ]
 
 
-
-# -----------------
-# CALCOLO METRICHE
-# -----------------
+# --------------------
+# METRICS CALCULATION
+# --------------------
 results = []
 
 for folder in folders:

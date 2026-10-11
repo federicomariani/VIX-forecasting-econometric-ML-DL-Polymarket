@@ -5,10 +5,10 @@ from dieboldmariano import dm_test
 
 
 
-# ---------------
-# CONFIGURAZIONE
-# ---------------
-orizzonte = 22 # da cambiare manualmente ad ogni run
+# --------------
+# CONFIGURATION
+# --------------
+orizzonte = 22 # change manually each time the code is run
 
 base_path = Path(r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket")
 
@@ -18,7 +18,7 @@ model_folders = {
     "dl": base_path / "Deep_Learning" / f"h{orizzonte}",
 }
 
-# Definizione esplicita delle COPPIE 1-vs-1 (Con PM vs Senza PM)
+# Explicit definition of the 1-vs-1 PAIRS (with PM vs without PM)
 pairs = [
     ("ARIMA", model_folders["econom"], f"arima_h{orizzonte}_con_PM.csv", f"arima_h{orizzonte}_senza_PM.csv"),
     ("HAR", model_folders["econom"], f"har_h{orizzonte}_con_PM.csv", f"har_h{orizzonte}_senza_PM.csv"),
@@ -33,9 +33,9 @@ pairs = [
 ]
 
 
-# -------------------------------
-# FUNZIONI DI LOSS (MSE & QLIKE)
-# -------------------------------
+# -----------------------------
+# LOSS FUNCTIONS (MSE & QLIKE)
+# -----------------------------
 def compute_mse_loss(actual, forecast):
     return (actual - forecast) ** 2
 
@@ -43,18 +43,18 @@ def compute_qlike_loss(actual, forecast):
     return (actual / forecast) - np.log(actual / forecast) - 1
 
 
-# --------------------------------
-# ESECUZIONE TEST DIEBOLD-MARIANO 
-# --------------------------------
+# -------------------------
+# RUN DIEBOLD-MARIANO TEST 
+# -------------------------
 results_mse = []
 results_qlike = []
 
 for model_label, folder, file_con, file_senza in pairs:
-    # Caricamento file "con PM" e "senza PM"
+    # Load the "with PM" and "without PM" files
     df_con = pd.read_csv(folder / file_con).dropna().set_index("Date")
     df_senza = pd.read_csv(folder / file_senza).dropna().set_index("Date")
     
-    # Allineamento per data
+    # Align by date
     common_idx = df_con.index.intersection(df_senza.index)
     df_con = df_con.loc[common_idx]
     df_senza = df_senza.loc[common_idx]
@@ -63,10 +63,10 @@ for model_label, folder, file_con, file_senza in pairs:
     pred_con = df_con["Forecast"].values
     pred_senza = df_senza["Forecast"].values
     
-    # ---------------------
-    # CALCOLO TEST PER MSE
-    # ---------------------
-    # Usiamo variance_estimator='bartlett' per evitare varianze negative a h=22
+    # -------------
+    # RUN MSE TEST
+    # -------------
+    # Use variance_estimator='bartlett' to avoid negative variances at h=22
     try:
         stat_mse, p_val_mse = dm_test(act, pred_con, pred_senza, h=orizzonte, variance_estimator='bartlett')
     except Exception as e:
@@ -78,18 +78,18 @@ for model_label, folder, file_con, file_senza in pairs:
     mean_mse_senza = np.mean(loss_mse_senza)
     
     results_mse.append({
-        "Modello": model_label,
-        "MSE (con PM)": mean_mse_con,
-        "MSE (senza PM)": mean_mse_senza,
+        "Model": model_label,
+        "MSE (with PM)": mean_mse_con,
+        "MSE (without PM)": mean_mse_senza,
         "Diff Loss (%)": ((mean_mse_con - mean_mse_senza) / mean_mse_senza) * 100,
         "Stat DM": stat_mse,
         "p-value": p_val_mse,
-        "Significativo (alpha=0.05)": "Sì ***" if (pd.notna(p_val_mse) and p_val_mse < 0.05) else "No"
+        "Significant (alpha=0.05)": "Sì ***" if (pd.notna(p_val_mse) and p_val_mse < 0.05) else "No"
     })
     
-    # -----------------------
-    # CALCOLO TEST PER QLIKE
-    # -----------------------
+    # ---------------
+    # RUN QLIKE TEST
+    # ---------------
     loss_qlike_con = compute_qlike_loss(act, pred_con)
     loss_qlike_senza = compute_qlike_loss(act, pred_senza)
     zeros = np.zeros_like(act)
@@ -103,25 +103,25 @@ for model_label, folder, file_con, file_senza in pairs:
     mean_qlike_senza = np.mean(loss_qlike_senza)
     
     results_qlike.append({
-        "Modello": model_label,
-        "QLIKE (con PM)": mean_qlike_con,
-        "QLIKE (senza PM)": mean_qlike_senza,
+        "Model": model_label,
+        "QLIKE (with PM)": mean_qlike_con,
+        "QLIKE (without PM)": mean_qlike_senza,
         "Diff Loss (%)": ((mean_qlike_con - mean_qlike_senza) / mean_qlike_senza) * 100,
         "Stat DM": stat_qlike,
         "p-value": p_val_qlike,
-        "Significativo (alpha=0.05)": "Sì ***" if (pd.notna(p_val_qlike) and p_val_qlike < 0.05) else "No"
+        "Significant (alpha=0.05)": "Sì ***" if (pd.notna(p_val_qlike) and p_val_qlike < 0.05) else "No"
     })
 
-# -----------------
-# STAMPA RISULTATI
-# -----------------
+# --------------
+# PRINT RESULTS
+# --------------
 print(f"\n==================================================================")
-print(f" DIEBOLD-MARIANO TEST (libreria 'dieboldmariano') - Orizzonte h = {orizzonte}")
-print(f" Confronto 1-vs-1: Stesso Modello (Con PM vs Senza PM)")
+print(f" DIEBOLD-MARIANO TEST (library 'dieboldmariano') - Forecast horizon h = {orizzonte}")
+print(f" 1-vs-1 comparison: Same model (with PM vs without PM)")
 print(f"==================================================================")
 
-print("\n--- RISULTATI PER MSE ---")
+print("\n--- MSE RESULTS ---")
 print(pd.DataFrame(results_mse).to_string(index=False))
 
-print("\n--- RISULTATI PER QLIKE ---")
+print("\n--- QLIKE RESULTS ---")
 print(pd.DataFrame(results_qlike).to_string(index=False))

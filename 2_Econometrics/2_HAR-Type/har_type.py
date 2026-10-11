@@ -97,7 +97,7 @@ def run_har_vix(h):
 
         # Creazione rolling window
         win_start = i - window_size
-        win_end = i - 1
+        win_end = i - h
 
         if win_start < dataset.index.min():
             continue

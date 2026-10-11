@@ -19,7 +19,7 @@ for df in [df_fomc, df_us_recession, df_cpi]:
     df.sort_index(inplace=True)
 
 
-# Pulizia dei dati l'ho già fatta sia manualmente su Excel che su Python, quindi passo direttamente alla fase di Feature Engineering per ogni dataset
+# I already cleaned the data manually in Excel and in Python, so I move directly to the Feature Engineering phase for each dataset
 
 
 # ---------------------------
@@ -70,9 +70,9 @@ df_cpi["entropy_cpi"] = - ((df_cpi["cpi_<=2.7"] * np.log2(df_cpi["cpi_<=2.7"])) 
 df_cpi = df_cpi.dropna()
 
 
-# --------------
-# MERGE DATASET 
-# --------------
+# ---------------
+# MERGE DATASETS
+# ---------------
 evento = "df_polymarket"
 output_folder = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\Clean" 
 file_output = f"{output_folder}/{evento}.csv"
@@ -93,9 +93,9 @@ df_polymarket = df_polymarket[~df_polymarket.index.duplicated(keep="first")]
 df_polymarket.to_csv(file_output, index = True)
 
 
-# --------------------------------
-# MERGE DATASET PM + TRADIZIONALE
-# --------------------------------
+# ---------------------------------------
+# MERGE POLYMARKET + TRADITIONAL DATASET
+# ---------------------------------------
 evento_2 = "dataset_w_polymarket"
 output_folder_2 = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data" 
 file_output_2 = f"{output_folder_2}/{evento_2}.csv"
@@ -118,10 +118,10 @@ df_finale = df_finale[~df_finale.index.duplicated(keep="first")]
 df_finale.to_csv(file_output_2, index=True)
 
 
-# --------------------------------
-# PERIODI DI SPLIT DEL DATASET BASE
-# --------------------------------
-# I cutoff sono calcolati sul dataset finale, prima degli shift dei modelli.
+# ---------------------------
+# BASE DATASET SPLIT PERIODS
+# ---------------------------
+# The cutoffs are calculated on the final dataset, before the model shifts.
 n_observations = len(df_finale)
 
 train_end_70 = int(n_observations * 0.70)
@@ -137,17 +137,17 @@ test_30_tft = df_finale.iloc[validation_end_70:]
 
 print("\nSPLIT 60% TRAINING / 10% VALIDATION / 30% TEST")
 print(
-    f"Training: {len(train_60)} osservazioni "
+    f"Training: {len(train_60)} observations "
     f"({len(train_60) / n_observations:.2%}) | "
     f"{train_60.index[0]} - {train_60.index[-1]}"
 )
 print(
-    f"Validation: {len(validation_10)} osservazioni "
+    f"Validation: {len(validation_10)} observations "
     f"({len(validation_10) / n_observations:.2%}) | "
     f"{validation_10.index[0]} - {validation_10.index[-1]}"
 )
 print(
-    f"Test: {len(test_30_tft)} osservazioni "
+    f"Test: {len(test_30_tft)} observations "
     f"({len(test_30_tft) / n_observations:.2%}) | "
     f"{test_30_tft.index[0]} - {test_30_tft.index[-1]}"
 )

@@ -3,7 +3,7 @@ import time
 import random
 import numpy as np
 import pandas as pd
-np.int = int  # serve per compatibilità con skopt
+np.int = int  # needed for compatibility with skopt
 
 import torch
 import torch.nn as nn
@@ -18,9 +18,9 @@ from skopt.space import Categorical, Integer, Real
 
 
 
-# --------------
-# SEED E DEVICE
-# --------------
+# ----------------
+# SEED AND DEVICE
+# ----------------
 random.seed(42)
 np.random.seed(42)
 torch.manual_seed(42)
@@ -36,20 +36,20 @@ dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset
 # -----------------
 # DATA PREPARATION
 # -----------------
-# Orizzonte di previsione: 1, 5 e 22 giorni 
-orizzonte = 22 # da cambiare manualmente ad ogni run del codice
+# Forecast horizons: 1, 5, and 22 days 
+orizzonte = 22 # change manually each time the code is run
 
-lookback = 20  # lunghezza della finestra di input 
+lookback = 20  # input window length 
 
-# Creazione target shiftato in avanti di h giorni (previsione diretta multi-step)
+# Create the target shifted forward by h days (direct multi-step forecast)
 target_col = f"Close_VIX_h{orizzonte}"
 dataset[target_col] = dataset["Close_VIX"].shift(-orizzonte)
 
-# La riga conserva la data delle feature; il target h-step appartiene invece alla data osservata h righe dopo. Manteniamo esplicitamente entrambe le date per evitare di salvare il VIX reale sulla data delle feature
+# The row retains the feature date; the h-step target belongs to the date observed h rows later. We explicitly retain both dates to avoid saving the actual VIX against the feature date
 target_date_col = f"Target_Date_h{orizzonte}"
 dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
-# Predittori completi (17 variabili, come nel modello Random Forest)
+# Full set of predictors (17 variables, as in the Random Forest model)
 predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", 
               "OVX_VIX_spread", "Close_VIX", "RSI_14d", "Log_Return_DXY",
               "Yield_curve", "Log_difference_initial_claims",
@@ -60,10 +60,10 @@ target = [target_col]
 # ------------------
 # DATA MANIPULATION
 # ------------------
-# Rimuovo le ultime righe che non hanno un target valido (fine serie)
+# Remove the last rows that do not have a valid target (end of series)
 dataset_h = dataset.dropna(subset=predittori + [target_col])
 
-# Suddivisione matrici in training, validation e test set
+# Split the matrices into training, validation, and test sets
 X = dataset_h[predittori]
 y = dataset_h[target_col]
 
@@ -72,15 +72,15 @@ n_observations = len(X)
 train_end = int(n_observations * 0.60)
 validation_end = int(n_observations * 0.70)
 
-# Date di confine tra gli split
+# Boundary dates between splits
 validation_start_date = dataset_h.index[train_end]
 test_start_date = dataset_h.index[validation_end]
 
-# Maschere di validità del target: non vengono più usate per rimuovere righe dalle feature, ma solo più avanti per decidere quali istanti t siano utilizzabili come target di training/validation
+# Target-validity masks: no longer used to remove rows from the features, but only later to decide which time points t are usable as training/validation targets
 train_mask = dataset_h[target_date_col] < validation_start_date
 validation_mask = dataset_h[target_date_col] < test_start_date
 
-# Le feature restano complete e continue: nessuna riga viene rimossa qui
+# Features remain complete and continuous: no rows are removed here
 X_training = X.iloc[:train_end]
 y_training = y.iloc[:train_end].squeeze()
 
@@ -90,9 +90,9 @@ y_validation = y.iloc[train_end:validation_end].squeeze()
 X_test = X.iloc[validation_end:]
 y_test = y.iloc[validation_end:].squeeze()
 
-print(f"Training set: {len(X_training)} osservazioni ({len(X_training) / n_observations:.2%})")
-print(f"Validation set: {len(X_validation)} osservazioni ({len(X_validation) / n_observations:.2%})")
-print(f"Test set: {len(X_test)} osservazioni ({len(X_test) / n_observations:.2%})")
+print(f"Training set: {len(X_training)} observations ({len(X_training) / n_observations:.2%})")
+print(f"Validation set: {len(X_validation)} observations ({len(X_validation) / n_observations:.2%})")
+print(f"Test set: {len(X_test)} observations ({len(X_test) / n_observations:.2%})")
 
 for nome, dataset_split in [
     ("Training", X_training),
@@ -100,16 +100,16 @@ for nome, dataset_split in [
     ("Test", X_test)
 ]:
     print(f"\n{nome} set:")
-    print(f"Primo elemento: {dataset_split.index[0]}")
-    print(f"Ultimo elemento: {dataset_split.index[-1]}")
+    print(f"First observation: {dataset_split.index[0]}")
+    print(f"Last observation: {dataset_split.index[-1]}")
 
 X_train_validation = pd.concat([X_training, X_validation])
 y_train_validation = pd.concat([y_training, y_validation])
 
 
-# -----------------------------
-# DEFINIZIONE DEL MODELLO LSTM 
-# -----------------------------
+# ----------------------
+# LSTM MODEL DEFINITION 
+# ----------------------
 class LSTMModel(nn.Module):
     def __init__(self, input_size, hidden_size=10, num_layers=2, dropout=0.3):
         super().__init__()
@@ -126,27 +126,27 @@ class LSTMModel(nn.Module):
 
     def forward(self, x):
         out, _ = self.lstm(x)
-        out = out[:, -1, :]  # output dell'ultimo timestep
+        out = out[:, -1, :]  # output at the last time step
         out = self.relu(self.fc1(out))
         out = self.fc2(out)
         return out
 
 
-# Parametri fissi condivisi da tutte le istanze del wrapper skorch
+# Fixed parameters shared by all skorch wrapper instances
 kwargs_comuni = dict(
     optimizer=torch.optim.Adam,
     criterion=nn.MSELoss,
-    train_split=None,   # la validazione è già gestita esternamente (PredefinedSplit / backtest)
-    iterator_train__shuffle=False,  # ordine cronologico preservato
+    train_split=None,   # validation is already handled externally (PredefinedSplit / backtest)
+    iterator_train__shuffle=False,  # chronological order preserved
     verbose=0,
     device=device,
 )
 
 
-# ---------------------------------------------------
-# FEATURE RANKING (Permutation Importance su LSTM)
-# ---------------------------------------------------
-# Scaling preliminare, solo per questa fase esplorativa (fit su training)
+# ----------------------------------------------
+# FEATURE RANKING (LSTM PERMUTATION IMPORTANCE)
+# ----------------------------------------------
+# Preliminary scaling, only for this exploratory phase (fit on training data)
 scaler_X_fs = RobustScaler()
 scaler_y_fs = RobustScaler()
 scaler_X_fs.fit(X_training)
@@ -157,7 +157,7 @@ y_training_scaled_fs = scaler_y_fs.transform(y_training.values.reshape(-1, 1)).r
 X_train_validation_scaled_fs = scaler_X_fs.transform(X_train_validation)
 y_train_validation_scaled_fs = scaler_y_fs.transform(y_train_validation.values.reshape(-1, 1)).ravel()
 
-# Tensorizzazione training (sequenze 3D)
+# Convert training data to tensors (3D sequences)
 X_training_seq_fs, y_training_seq_fs = [], []
 for t in range(lookback - 1, train_end):
     if not train_mask.iloc[t]:
@@ -167,7 +167,7 @@ for t in range(lookback - 1, train_end):
 X_training_seq_fs = np.array(X_training_seq_fs, dtype=np.float32)
 y_training_seq_fs = np.array(y_training_seq_fs, dtype=np.float32).reshape(-1, 1)
 
-# Tensorizzazione validation (sequenze 3D)
+# Convert validation data to tensors (3D sequences)
 X_validation_seq_fs, y_validation_seq_fs = [], []
 for t in range(train_end, len(X_train_validation_scaled_fs)):
     if not validation_mask.iloc[t]:
@@ -177,7 +177,7 @@ for t in range(train_end, len(X_train_validation_scaled_fs)):
 X_validation_seq_fs = np.array(X_validation_seq_fs, dtype=np.float32)
 y_validation_seq_fs = np.array(y_validation_seq_fs, dtype=np.float32).reshape(-1, 1)
 
-# Modello LSTM baseline (iperparametri di default, non ottimizzati)
+# Baseline LSTM model (default, untuned hyperparameters)
 lstm_baseline = NeuralNetRegressor(
     module=LSTMModel,
     module__input_size=len(predittori),
@@ -191,7 +191,7 @@ lstm_baseline = NeuralNetRegressor(
 )
 lstm_baseline.fit(X_training_seq_fs, y_training_seq_fs)
 
-# Permutation importance calcolata su validation (shuffling coerente su tutti i timestep)
+# Permutation importance calculated on validation data (consistent shuffling across all time steps)
 y_pred_baseline = lstm_baseline.predict(X_validation_seq_fs)
 mse_baseline = mean_squared_error(y_validation_seq_fs, y_pred_baseline)
 
@@ -222,12 +222,12 @@ print("RANKING PERMUTATION IMPORTANCE (LSTM)")
 print(ranking)
 
 
-# ---------------------------------------------------
-# TENSORIZZAZIONE TRAIN + VALIDATION (per il tuning)
-# ---------------------------------------------------
-# Costruiamo le sequenze mantenendo intera la storia delle feature (nessun buco):
-# le maschere decidono solo se un istante t è un target valido e a quale fold
-# appartiene, non se una riga di feature va rimossa
+# ---------------------------------------------
+# TENSORIZE TRAINING + VALIDATION (FOR TUNING)
+# ---------------------------------------------
+# Build sequences while preserving the full feature history (no gaps):
+# the masks decide only whether a time point t is a valid target and which fold it belongs to
+# belongs to, not whether a feature row should be removed
 X_tv_seq, y_tv_seq = [], []
 test_fold = []
 
@@ -252,9 +252,9 @@ test_fold = np.array(test_fold)
 ps = PredefinedSplit(test_fold)
 
 
-# ------------------------------------------
-# GRID SEARCH CV OPTIMIZATION IPERPARAMETRI
-# ------------------------------------------
+# -------------------------------------------
+# GRID SEARCH CV HYPERPARAMETER OPTIMIZATION
+# -------------------------------------------
 param_grid_cross_validation = {
     "module__hidden_size": [8, 16, 32],
     "module__num_layers": [1, 2],
@@ -279,7 +279,7 @@ grid_search = GridSearchCV(
     param_grid=param_grid_cross_validation,
     cv=ps,
     scoring="neg_mean_squared_error",
-    n_jobs=1,  # con PyTorch/GPU n_jobs=1 evita conflitti
+    n_jobs=1,  # with PyTorch/GPU, n_jobs=1 avoids conflicts
     verbose=2,
 )
 
@@ -287,13 +287,13 @@ grid_search.fit(X_tv_seq, y_tv_seq)
 tempo_grid_search = time.time() - start_cross_validation
 best_iperparameters_cross_validation = grid_search.best_params_
 
-print("MIGLIORI IPERPARAMETRI GRID-SEARCH CV:", best_iperparameters_cross_validation)
-print("TEMPO DI TUNING GRID-SEARCH CV:", tempo_grid_search)
+print("BEST GRID SEARCH CV HYPERPARAMETERS:", best_iperparameters_cross_validation)
+print("GRID SEARCH CV TUNING TIME:", tempo_grid_search)
 
 
-# ------------------------------------
-# BAYESIAN OPTIMIZATION IPERPARAMETRI
-# ------------------------------------
+# --------------------------------------
+# BAYESIAN OPTIMIZATION HYPERPARAMETERS
+# --------------------------------------
 search_spaces_bayesian_optimization = {
     "module__hidden_size": Integer(8, 32),
     "module__num_layers": Categorical([1, 2]),
@@ -328,14 +328,14 @@ bayesian_optimization.fit(X_tv_seq, y_tv_seq)
 tempo_bayesian_optimization = time.time() - start_bayesian_optimization
 best_iperparameters_bayesian_optimization = dict(bayesian_optimization.best_params_)
 
-print("MIGLIORI IPERPARAMETRI BAYESIAN OPTIMIZATION:", best_iperparameters_bayesian_optimization)
-print("TEMPO DI TUNING BAYESIAN OPTIMIZATION:", tempo_bayesian_optimization)
+print("BEST BAYESIAN OPTIMIZATION HYPERPARAMETERS:", best_iperparameters_bayesian_optimization)
+print("BAYESIAN OPTIMIZATION TUNING TIME:", tempo_bayesian_optimization)
 
 
 # ------------------------
-# SCALING PER IL BACKTEST
+# SCALING FOR BACKTESTING
 # ------------------------
-# Fit su training + validation, tenuto fisso per tutta la sliding window per motivi di costo computazionale
+# Fit on training + validation, kept fixed throughout the sliding window for computational efficiency
 scaler_X = RobustScaler()
 scaler_y = RobustScaler()
 scaler_X.fit(X_train_validation)
@@ -345,9 +345,9 @@ train_valid_mask_for_scaling = pd.concat([
 ])
 scaler_y.fit(y_train_validation[train_valid_mask_for_scaling].values.reshape(-1, 1))
 
-# ------------------------------------------------------------------
-# PREPARAZIONE DATI PER IL BACKTEST (scaler fissato, non rifittato)
-# ------------------------------------------------------------------
+# ----------------------------------------------------------
+# PREPARE DATA FOR BACKTESTING (scaler fixed, not refitted)
+# ----------------------------------------------------------
 X_all = pd.concat([X_training, X_validation, X_test])
 y_all = pd.concat([y_training, y_validation, y_test])
 target_dates_all = dataset_h.loc[X_all.index, target_date_col]
@@ -374,15 +374,15 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
 
-    # Solo target osservabili ad oggi, per evitare leakage
+    # Only targets observable as of the current date, to avoid leakage
     target_idx = i + n_train + n_validation
-    train_end = target_idx - orizzonte + 1  # estremo escluso
+    train_end = target_idx - orizzonte + 1  # exclusive end
     train_window_X_scaled = X_all_scaled[i: train_end]
     train_window_y_scaled = y_all_scaled[i: train_end]
     
-    vix_origin_list_cv.append(dataset_h.loc[X_all.index[target_idx], "Close_VIX"]) # salvo VIX di origine
+    vix_origin_list_cv.append(dataset_h.loc[X_all.index[target_idx], "Close_VIX"]) # Save the origin VIX
               
-    # Finestra t termina in t incluso, non più quindi in t-1
+    # Window t ends at t, inclusive, rather than at t-1 as before
     X_window_seq, y_window_seq = [], []
     for t in range(lookback - 1, len(train_window_X_scaled)):
         X_window_seq.append(train_window_X_scaled[t - lookback + 1: t + 1, :])
@@ -407,17 +407,17 @@ for i in range(n_test):
     y_predicted_list_cv.append(pred_cv)
     dates_predicted_cv.append(target_dates_all.iloc[target_idx])
 
-# Riallineamento valori previsti y con date
+# Align predicted y values with dates
 y_predicted_backtest_cv = pd.Series(y_predicted_list_cv, index=dates_predicted_cv, name="VIX_Forecasted")
 y_true_backtest_cv = pd.Series(
     y_all.iloc[n_train + n_validation:].to_numpy(),
     index=dates_predicted_cv,
-    name="VIX_Reale",
+    name="VIX_Actual",
 )
 
-y_vix_origin_cv = pd.Series(vix_origin_list_cv, index=dates_predicted_cv, name="VIX_Origine")
+y_vix_origin_cv = pd.Series(vix_origin_list_cv, index=dates_predicted_cv, name="VIX_Origin")
 
-# Cartella comune dove vengono salvati i risultati
+# Common folder where results are saved
 output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
 os.makedirs(output_dir, exist_ok=True)
 
@@ -429,9 +429,9 @@ df_out_cv.index.name = "Date"
 df_out_cv.to_csv(os.path.join(output_dir, f"lstm_gridsearch_h{orizzonte}.csv"))
 
 
-# ------------------------
-# CALCOLO METRICHE ERRORE
-# ------------------------
+# --------------
+# ERROR METRICS
+# --------------
 mse_cv = mean_squared_error(y_true_backtest_cv, y_predicted_backtest_cv)
 mae_cv = mean_absolute_error(y_true_backtest_cv, y_predicted_backtest_cv)
 mape_cv = mean_absolute_percentage_error(y_true_backtest_cv, y_predicted_backtest_cv)
@@ -442,7 +442,7 @@ actual_direction_cv = np.sign(y_true_backtest_cv - y_vix_origin_cv)
 predicted_direction_cv = np.sign(y_predicted_backtest_cv - y_vix_origin_cv)
 directional_accuracy_cv = (actual_direction_cv == predicted_direction_cv).mean() * 100
 
-print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM GRID-SEARCH CV ---")
+print("\n--- LSTM GRID SEARCH CV SLIDING WINDOW BACKTEST METRICS ---")
 print(f"MSE {orizzonte}:  {mse_cv:.4f}")
 print(f"MAE:  {mae_cv:.4f}")
 print(f"MAPE: {mape_cv:.4f}")
@@ -451,9 +451,9 @@ print(f"QLIKE: {qlike_cv:.4f}")
 print(f"Directional Accuracy: {directional_accuracy_cv:.2f}%")
 
 
-# -----------------------------------------------------------------------
-# SLIDING WINDOW BACKTEST (WALK-FORKWARD FORECAST) BAYESIAN OPTIMIZATION
-# -----------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# SLIDING WINDOW BACKTEST (WALK-FORWARD FORECAST) BAYESIAN OPTIMIZATION
+# ----------------------------------------------------------------------
 y_predicted_list_bo = []
 dates_predicted_bo = []
 vix_origin_list_bo = []
@@ -465,15 +465,15 @@ for i in range(n_test):
         elapsed = time.time() - start
         print(f"Iterazione {i}/{n_test} - {elapsed:.1f} s")
 
-    # Solo target osservabili ad oggi, per evitare leakage
+    # Only targets observable as of the current date, to avoid leakage
     target_idx = i + n_train + n_validation
-    train_end = target_idx - orizzonte + 1  # estremo escluso
+    train_end = target_idx - orizzonte + 1  # exclusive end
     train_window_X_scaled = X_all_scaled[i: train_end]
     train_window_y_scaled = y_all_scaled[i: train_end]
     
     vix_origin_list_bo.append(dataset_h.loc[X_all.index[target_idx], "Close_VIX"])
                 
-    # Finestra t termina in t incluso, non più quindi in t-1
+    # Window t ends at t, inclusive, rather than at t-1 as before
     X_window_seq, y_window_seq = [], []
     for t in range(lookback - 1, len(train_window_X_scaled)):
         X_window_seq.append(train_window_X_scaled[t - lookback + 1: t + 1, :])
@@ -502,10 +502,10 @@ y_predicted_backtest_bo = pd.Series(y_predicted_list_bo, index=dates_predicted_b
 y_true_backtest_bo = pd.Series(
     y_all.iloc[n_train + n_validation:].to_numpy(),
     index=dates_predicted_bo,
-    name="VIX_Reale",
+    name="VIX_Actual",
 )
 
-y_vix_origin_bo = pd.Series(vix_origin_list_bo, index=dates_predicted_bo, name="VIX_Origine")
+y_vix_origin_bo = pd.Series(vix_origin_list_bo, index=dates_predicted_bo, name="VIX_Origin")
 
 df_out_bo = pd.DataFrame({
     "Actual": y_true_backtest_bo,
@@ -517,9 +517,9 @@ os.makedirs(os.path.dirname(output_file_bo), exist_ok=True)
 df_out_bo.to_csv(output_file_bo)
 
 
-# ------------------------
-# CALCOLO METRICHE ERRORE
-# ------------------------
+# --------------
+# ERROR METRICS
+# --------------
 mse_bo = mean_squared_error(y_true_backtest_bo, y_predicted_backtest_bo)
 mae_bo = mean_absolute_error(y_true_backtest_bo, y_predicted_backtest_bo)
 mape_bo = mean_absolute_percentage_error(y_true_backtest_bo, y_predicted_backtest_bo)
@@ -530,7 +530,7 @@ actual_direction_bo = np.sign(y_true_backtest_bo - y_vix_origin_bo)
 predicted_direction_bo = np.sign(y_predicted_backtest_bo - y_vix_origin_bo)
 directional_accuracy_bo = (actual_direction_bo == predicted_direction_bo).mean() * 100
 
-print("\n--- METRICHE BACKTEST SLIDING WINDOW LSTM BAYESIAN OPTIMIZATION ---")
+print("\n--- LSTM BAYESIAN OPTIMIZATION SLIDING WINDOW BACKTEST METRICS ---")
 print(f"MSE {orizzonte}: {mse_bo:.4f}")
 print(f"MAE: {mae_bo:.4f}")
 print(f"MAPE: {mape_bo:.4f}")
@@ -539,16 +539,16 @@ print(f"QLIKE: {qlike_bo:.4f}")
 print(f"Directional Accuracy: {directional_accuracy_bo:.2f}%")
 
 
-# -------------------------------------
-# GRAFICI: VIX REALE vs VIX FORECASTED
-# -------------------------------------
+# ------------------------------------
+# PLOTS: ACTUAL VIX VS FORECASTED VIX
+# ------------------------------------
 y_true_backtest_cv.index = pd.to_datetime(y_true_backtest_cv.index)
 y_predicted_backtest_cv.index = pd.to_datetime(y_predicted_backtest_cv.index)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
-ax.plot(y_true_backtest_cv.index, y_true_backtest_cv, label="VIX Reale", color="black", linewidth=1.2)
-ax.plot(y_predicted_backtest_cv.index, y_predicted_backtest_cv, label="VIX Previsto (LSTM)", color="red", linewidth=1.2, alpha=0.8)
+ax.plot(y_true_backtest_cv.index, y_true_backtest_cv, label="Actual VIX", color="black", linewidth=1.2)
+ax.plot(y_predicted_backtest_cv.index, y_predicted_backtest_cv, label="Forecast VIX (LSTM)", color="red", linewidth=1.2, alpha=0.8)
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
@@ -557,8 +557,8 @@ fig.autofmt_xdate(rotation=45)
 output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
 os.makedirs(output_dir_grafici, exist_ok=True)
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con ottimizzazione iperparametri tramite Grid Search CV h = {orizzonte}")
-ax.set_xlabel("Data")
+ax.set_title(f"Actual VIX vs Forecast VIX (Test Set) with Grid Search CV hyperparameter optimization h = {orizzonte}")
+ax.set_xlabel("Date")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()
@@ -570,15 +570,15 @@ y_predicted_backtest_bo.index = pd.to_datetime(y_predicted_backtest_bo.index)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 
-ax.plot(y_true_backtest_bo.index, y_true_backtest_bo, label="VIX Reale", color="black", linewidth=1.2)
-ax.plot(y_predicted_backtest_bo.index, y_predicted_backtest_bo, label="VIX Previsto (LSTM)", color="red", linewidth=1.2, alpha=0.8)
+ax.plot(y_true_backtest_bo.index, y_true_backtest_bo, label="Actual VIX", color="black", linewidth=1.2)
+ax.plot(y_predicted_backtest_bo.index, y_predicted_backtest_bo, label="Forecast VIX (LSTM)", color="red", linewidth=1.2, alpha=0.8)
 
 ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 fig.autofmt_xdate(rotation=45)
 
-ax.set_title(f"VIX Reale vs VIX Previsto (Test Set) con Bayesian Optimization h = {orizzonte}")
-ax.set_xlabel("Data")
+ax.set_title(f"Actual VIX vs Forecast VIX (Test Set) with Bayesian Optimization h = {orizzonte}")
+ax.set_xlabel("Date")
 ax.set_ylabel("VIX")
 ax.legend()
 plt.tight_layout()

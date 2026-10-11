@@ -4,10 +4,11 @@ from sklearn.metrics import mean_absolute_error, mean_absolute_percentage_error,
 from pathlib import Path
 
 
+
 # ---------------
 # IMPORT DATASET
 # ---------------
-orizzonte = 22 # Da cambiare ad ogni run (1, 5 e 22)
+orizzonte = 22 # Change on each run (1, 5, or 22)
 
 folders = [
     Path(rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Modelli_econometrici\h{orizzonte}"),
@@ -16,9 +17,9 @@ folders = [
 ]
 
 
-# -----------------
-# CALCOLO METRICHE
-# -----------------
+# --------------------
+# METRICS CALCULATION
+# --------------------
 results = []
 
 for folder in folders:
@@ -27,7 +28,7 @@ for folder in folders:
         # Import dataset
         dataset = pd.read_csv(file).dropna().copy()
 
-        # Assicurarsi che le date siano ordinate
+        # Ensure dates are sorted
         dataset["Date"] = pd.to_datetime(
             dataset["Date"],
             format="mixed",
@@ -35,7 +36,7 @@ for folder in folders:
         )
         dataset = dataset.sort_values("Date").reset_index(drop=True)    
 
-        # Regimi di volatilità 
+        # Volatility regimes
         dataset["Volatility Regime"] = np.select(
         [
             dataset["Actual"] < 20,
@@ -50,13 +51,13 @@ for folder in folders:
         default="Unknown"
         )
 
-        # Calcolo metriche errore per ogni regime di volatilità
+        # Calculate error metrics for each volatility regime
         for regime in ["Low (<20)", "Medium (20-30)", "High (>30)"]:
 
-            # Filtra le osservazioni del regime
+            # Filter observations for the regime
             regime_data = dataset[dataset["Volatility Regime"] == regime].copy()
 
-            # Se non ci sono osservazioni, passa al regime successivo
+            # If there are no observations, move on to the next regime
             if len(regime_data) == 0:
                 continue
 
@@ -79,12 +80,12 @@ for folder in folders:
 
             predicted_direction = np.sign(dataset["Forecast"] - dataset["Actual"].shift(1))
 
-            # Seleziona solo le osservazioni appartenenti al regime corrente
+            # Select only observations belonging to the current regime
             regime_mask = (dataset["Volatility Regime"] == regime)
 
             directional_accuracy = (actual_direction[regime_mask] == predicted_direction[regime_mask]).mean() * 100
 
-            # Salva risultati    
+            # Save results    
             results.append({
                 "Model": file.stem,
                 "Volatility Regime": regime,
@@ -98,13 +99,12 @@ for folder in folders:
             })
 
 
-# ----------------------------
-# CREAZIONE TABELLA RISULTATI
-# ----------------------------
+# ---------------------
+# CREATE RESULTS TABLE
+# ---------------------
 results_df = pd.DataFrame(results)
 
-
-# Ordine desiderato dei regimi
+# Desired regime order
 regime_order = [
     "Low (<20)",
     "Medium (20-30)",
