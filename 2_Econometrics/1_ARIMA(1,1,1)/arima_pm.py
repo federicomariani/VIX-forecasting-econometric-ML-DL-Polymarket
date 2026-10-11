@@ -10,9 +10,9 @@ warnings.filterwarnings("ignore")
 
 
 
-# ---------
-# PERCORSI 
-# ---------
+# ------
+# PATHS 
+# ------
 base_path = Path(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data")
 
 path_input = base_path / "dataset_w_polymarket.csv"
@@ -23,10 +23,10 @@ dir_results.mkdir(parents=True, exist_ok=True)
 dir_plots.mkdir(parents=True, exist_ok=True)
 
 
-# -------------------------------
-# CON O SENZA FEATURE POLYMARKET
-# -------------------------------
-evento = "con_PM"   # "con_PM" oppure "senza_PM"
+# ------------------------------------
+# WITH OR WITHOUT POLYMARKET FEATURES
+# ------------------------------------
+evento = "con_PM"   # "con_PM" or "senza_PM"
 
 pm_features = [
     "cut_50", "cut_25", "hold", "hike_25",
@@ -41,9 +41,9 @@ pm_features = [
 exog_cols = pm_features if evento == "con_PM" else []
 
 
-# -------------------------
-# IMPORT DATASET E PULIZIA
-# -------------------------
+# ----------------------------
+# DATASET IMPORT AND CLEANING
+# ----------------------------
 df = pd.read_csv(
     path_input,
     index_col="Date",
@@ -54,7 +54,7 @@ df.index.name = "Date"
 df = df.sort_index()
 
 horizons = [1, 5, 22]
-orizzonte = 1  # variabile usata solo per stampare splitting dati
+orizzonte = 1  # variable used only to print the data split
 df = df.iloc[:-orizzonte].copy()
 
 subset_cols = ["Close_VIX"] + exog_cols
@@ -64,11 +64,11 @@ values = np.log(df["Close_VIX"]).values
 dates = df.index.values
 n = len(values)
 
-# DataFrame delle feature Polymarket "grezze" (non laggate): serve sia per
-# costruire la versione laggata sia per il forecast (vedi sotto)
+# DataFrame of "raw" (unlagged) Polymarket features: used both to
+# build the lagged version and for forecasting (see below)
 exog_raw = df[exog_cols].reset_index(drop=True) if exog_cols else None
 
-# Suddivisione cronologica: 70% training e 30% test
+# Chronological split: 70% training and 30% test
 train_end_idx = int(n * 0.70)
 target_start_idx = train_end_idx
 window_size = train_end_idx
@@ -76,22 +76,22 @@ window_size = train_end_idx
 train_data = df.iloc[:train_end_idx]
 test_data = df.iloc[target_start_idx:]
 
-print("\nSUDDIVISIONE DATASET")
+print("\nDATASET SPLIT")
 print(
-    f"Training set: {len(train_data)} osservazioni "
+    f"Training set: {len(train_data)} observations "
     f"({len(train_data) / n:.2%}) | "
     f"{train_data.index[0].date()} - {train_data.index[-1].date()}"
 )
 print(
-    f"Test set: {len(test_data)} osservazioni "
+    f"Test set: {len(test_data)} observations "
     f"({len(test_data) / n:.2%}) | "
     f"{test_data.index[0].date()} - {test_data.index[-1].date()}"
 )
 
 
-# -----------------
-# CALCOLO METRICHE
-# -----------------
+# --------------------
+# METRICS CALCULATION
+# --------------------
 def calc_metrics(actual, forecast, origin_actual):
     a = np.asarray(actual, dtype=float)
     f = np.asarray(forecast, dtype=float)
@@ -121,18 +121,18 @@ def calc_metrics(actual, forecast, origin_actual):
     }
 
 
-# ------------------------------------------------------------------
-# COSTRUZIONE FEATURE POLYMARKET LAGGATE (lag = h, per ogni orizzonte)
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------
+# BUILD LAGGED POLYMARKET FEATURES (lag = h, for each forecast horizon)
+# ----------------------------------------------------------------------
 # PM_lag_t = PM_(t-h)
 #
-# Perche' questo lag evita il problema della persistenza in ARIMAX:
-# per il forecast a h passi serve un valore di exog per ciascuno dei
-# giorni futuri T+1, ..., T+h. Con la feature laggata di h periodi,
-# il valore richiesto in T+k e' PM_(T+k-h): per k che va da 1 a h,
-# questo indice va da T+1-h a T, cioe' SEMPRE minore o uguale a T
-# (oggi). Non serve quindi alcuna assunzione sui valori futuri di
-# Polymarket: tutti i valori necessari sono gia' osservati.
+# Why this lag avoids the persistence problem in ARIMAX:
+# an exogenous value is needed for each of the h forecast steps
+# T+1, ..., T+h. With the feature lagged by h periods,
+# the required value at T+k is PM_(T+k-h): for k from 1 to h,
+# this index ranges from T+1-h to T, i.e. it is ALWAYS less than or equal to T
+# (today). Therefore, no assumptions about future Polymarket values are needed:
+# all required values have already been observed.
 def build_lagged_exog(exog_raw_df, h):
     if exog_raw_df is None:
         return None
@@ -147,13 +147,13 @@ def build_lagged_exog(exog_raw_df, h):
 metrics_summary = {}
 
 for h in horizons:
-    print(f"\nELABORAZIONE ORIZZONTE h = {h}")
+    print(f"\nPROCESSING FORECAST HORIZON h = {h}")
 
     exog_lagged_h = build_lagged_exog(exog_raw, h) if exog_cols else None
 
-    # Si sposta l'inizio del test di (h-1) osservazioni per garantire che la
-    # prima finestra rolling non contenga NaN dovuti al lag (le prime h
-    # osservazioni di exog_lagged_h sono NaN per costruzione, essendo shift(h))
+    # The start of the test is shifted by (h-1) observations to ensure that the
+    # first rolling window contains no NaNs caused by the lag (the first h
+    # observations di exog_lagged_h sono NaN per costruzione, essendo shift(h))
     start_origin_idx = target_start_idx + (h - 1) if exog_cols else target_start_idx
 
     records = []
@@ -165,8 +165,8 @@ for h in horizons:
 
         if exog_cols:
             exog_window = exog_lagged_h.iloc[t_origin - window_size + 1: t_origin + 1].reset_index(drop=True)
-            # exog futuro per il forecast a h passi: valori GIA' OSSERVATI
-            # (vedi spiegazione sopra: PM_raw da T-h+1 a T)
+            # future exogenous values for the h-step forecast: ALREADY OBSERVED values
+            # (see explanation above: PM_raw from T-h+1 to T)
             exog_future = exog_raw.iloc[t_origin - h + 1: t_origin + 1].reset_index(drop=True)
             exog_future.columns = exog_window.columns
         else:
@@ -193,7 +193,7 @@ for h in horizons:
 
         if (step_count + 1) % 100 == 0 or (step_count + 1) == total_steps:
             elapsed = time.time() - t0
-            print(f"  [h={h}] Passi completati: {step_count + 1}/{total_steps} ({elapsed:.1f}s)")
+            print(f"  [h={h}] Steps completed: {step_count + 1}/{total_steps} ({elapsed:.1f}s)")
 
     df_h_results = pd.DataFrame(records)
 
@@ -209,23 +209,23 @@ for h in horizons:
     path_csv_mcs = dir_results / f"arima_h{h}_{evento}.csv"
     df_mcs_export.to_csv(path_csv_mcs)
 
-    # Calcolo metriche per ogni orizzonte
+    # Calculate metrics for each forecast horizon
     metrics_summary[h] = calc_metrics(
         df_h_results["actual"],
         df_h_results["forecast"],
         df_h_results["origin_actual"]
     )
 
-    # Grafici
+    # Plots
     plot_df = df_h_results.set_index("target_date")
 
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.plot(plot_df.index, plot_df["actual"], label="VIX Reale", color="black", linewidth=1.8, alpha=0.4)
-    ax.plot(plot_df.index, plot_df["forecast"], label=f"Previsione ARIMAX h={h} ({evento})",
+    ax.plot(plot_df.index, plot_df["actual"], label="Actual VIX", color="black", linewidth=1.8, alpha=0.4)
+    ax.plot(plot_df.index, plot_df["forecast"], label=f"ARIMAX forecast h={h} ({evento})",
             color="tab:blue", linestyle="--", linewidth=1.2)
 
-    ax.set_title(f"VIX Reale vs Previsione ARIMAX(1,1,1) con PM laggate - Orizzonte h={h} ({evento})")
-    ax.set_xlabel("Data Target")
+    ax.set_title(f"Actual VIX vs ARIMAX(1,1,1) Forecast with Lagged PM Features - Horizon h={h} ({evento})")
+    ax.set_xlabel("Target Date")
     ax.set_ylabel("VIX")
     ax.legend()
     ax.grid(True, alpha=0.3)
@@ -236,9 +236,9 @@ for h in horizons:
     plt.close()
 
 
-# ----------------------------
-# SALVATAGGIO METRICHE FINALI
-# ----------------------------
+# -------------------
+# SAVE FINAL METRICS
+# -------------------
 metrics_df = pd.DataFrame(metrics_summary).T
 metrics_df.index.name = "horizon"
 

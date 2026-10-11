@@ -10,9 +10,9 @@ warnings.filterwarnings("ignore")
 
 
 
-# ---------
-# PERCORSI 
-# ---------
+# ------
+# PATHS 
+# ------
 base_path = Path(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean")
 
 path_input = base_path / "dataset.csv"
@@ -23,9 +23,9 @@ dir_results.mkdir(parents=True, exist_ok=True)
 dir_plots.mkdir(parents=True, exist_ok=True)
 
 
-# -------------------------
-# IMPORT DATASET E PULIZIA
-# -------------------------
+# ----------------------------
+# DATASET IMPORT AND CLEANING
+# ----------------------------
 df = pd.read_csv(path_input,
     index_col="Date",
     parse_dates=["Date"],
@@ -33,14 +33,14 @@ df = pd.read_csv(path_input,
 df.index.name = "Date"
 
 horizons = [1, 5, 22]
-orizzonte = 1 # variabile usata solo per stampare splitting dati
+orizzonte = 1 # variable used only to print the data split
 df = df.iloc[:-orizzonte].copy()
 
 values = np.log(df["Close_VIX"]).values
 dates = df.index.values
 n = len(values)
 
-# Suddivisione cronologica: 70% training e 30% test
+# Chronological split: 70% training and 30% test
 train_end_idx = int(n * 0.70)
 target_start_idx = train_end_idx
 window_size = train_end_idx
@@ -48,22 +48,22 @@ window_size = train_end_idx
 train_data = df.iloc[:train_end_idx]
 test_data = df.iloc[target_start_idx:]
 
-print("\nSUDDIVISIONE DATASET")
+print("\nDATASET SPLIT")
 print(
-    f"Training set: {len(train_data)} osservazioni "
+    f"Training set: {len(train_data)} observations "
     f"({len(train_data) / n:.2%}) | "
     f"{train_data.index[0].date()} - {train_data.index[-1].date()}"
 )
 print(
-    f"Test set: {len(test_data)} osservazioni "
+    f"Test set: {len(test_data)} observations "
     f"({len(test_data) / n:.2%}) | "
     f"{test_data.index[0].date()} - {test_data.index[-1].date()}"
 )
 
 
-# -----------------
-# CALCOLO METRICHE
-# -----------------
+# --------------------
+# METRICS CALCULATION
+# --------------------
 def calc_metrics(actual, forecast, origin_actual):
     a = np.asarray(actual, dtype=float)
     f = np.asarray(forecast, dtype=float)
@@ -99,10 +99,10 @@ def calc_metrics(actual, forecast, origin_actual):
 metrics_summary = {}
 
 for h in horizons:
-    print(f"ELABORAZIONE ORIZZONTE h = {h}")
+    print(f"PROCESSING FORECAST HORIZON h = {h}")
     
-    # Il primo forecast parte dall'inizio del test set e prevede h passi avanti.
-    # In questo modo la finestra iniziale resta interamente nel training set.
+    # The first forecast starts at the beginning of the test set and predicts h steps ahead.
+    # This keeps the initial window entirely within the training set.
     start_origin_idx = target_start_idx
     
     records = []
@@ -110,7 +110,7 @@ for h in horizons:
     total_steps = n - h - start_origin_idx
 
     for step_count, t_origin in enumerate(range(start_origin_idx, n - h)):
-        # Finestra rolling mobile a dimensione fissa
+        # Fixed-size rolling window
         window_data = values[t_origin - window_size + 1 : t_origin + 1]
 
         try:
@@ -132,7 +132,7 @@ for h in horizons:
 
         if (step_count + 1) % 100 == 0 or (step_count + 1) == total_steps:
             elapsed = time.time() - t0
-            print(f"  [h={h}] Passi completati: {step_count + 1}/{total_steps} ({elapsed:.1f}s)")
+            print(f"  [h={h}] Steps completed: {step_count + 1}/{total_steps} ({elapsed:.1f}s)")
 
     df_h_results = pd.DataFrame(records)
 
@@ -148,23 +148,23 @@ for h in horizons:
     path_csv_mcs = dir_results / f"arima_h{h}.csv"
     df_mcs_export.to_csv(path_csv_mcs)
     
-    # Calcolo metriche per ogni orizzonte
+    # Calculate metrics for each forecast horizon
     metrics_summary[h] = calc_metrics(
         df_h_results["actual"],
         df_h_results["forecast"],
         df_h_results["origin_actual"]
     )
 
-    # Grafici
+    # Plots
     plot_df = df_h_results.set_index("target_date")
 
     fig, ax = plt.subplots(figsize=(14, 6))
-    ax.plot(plot_df.index, plot_df["actual"], label="VIX Reale", color="black", linewidth=1.8, alpha=0.4)
-    ax.plot(plot_df.index, plot_df["forecast"], label=f"Previsione ARIMA h={h}",
+    ax.plot(plot_df.index, plot_df["actual"], label="Actual VIX", color="black", linewidth=1.8, alpha=0.4)
+    ax.plot(plot_df.index, plot_df["forecast"], label=f"ARIMA forecast h={h}",
             color="tab:blue", linestyle="--", linewidth=1.2)
 
-    ax.set_title(f"VIX Reale vs Previsione ARIMA(1,1,1) - Orizzonte h={h}")
-    ax.set_xlabel("Data Target")
+    ax.set_title(f"Actual VIX vs ARIMA(1,1,1) Forecast - Horizon h={h}")
+    ax.set_xlabel("Target Date")
     ax.set_ylabel("VIX")
     ax.legend()
     ax.grid(True, alpha=0.3)
@@ -175,9 +175,9 @@ for h in horizons:
     plt.close()
 
 
-# ----------------------------
-# SALVATAGGIO METRICHE FINALI
-# ----------------------------
+# -------------------
+# SAVE FINAL METRICS
+# -------------------
 metrics_df = pd.DataFrame(metrics_summary).T
 metrics_df.index.name = "horizon"
 
