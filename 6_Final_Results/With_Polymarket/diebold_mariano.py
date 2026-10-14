@@ -5,12 +5,16 @@ from dieboldmariano import dm_test
 
 
 
-# --------------
-# CONFIGURATION
-# --------------
-orizzonte = 22 # change manually each time the code is run
+# ---------------
+# CONFIGURAZIONE
+# ---------------
+orizzonte = 5 # da cambiare manualmente ad ogni run
 
-base_path = Path(r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket")
+base_path = (
+    Path(__file__).resolve().parents[2]
+    / "5_Forecasts_&_Error_Metrics"
+    / "With_Polymarket"
+)
 
 model_folders = {
     "econom": base_path / "Modelli_econometrici" / f"h{orizzonte}",
@@ -18,7 +22,7 @@ model_folders = {
     "dl": base_path / "Deep_Learning" / f"h{orizzonte}",
 }
 
-# Explicit definition of the 1-vs-1 PAIRS (with PM vs without PM)
+# Definizione esplicita delle COPPIE 1-vs-1 (Con PM vs Senza PM)
 pairs = [
     ("ARIMA", model_folders["econom"], f"arima_h{orizzonte}_con_PM.csv", f"arima_h{orizzonte}_senza_PM.csv"),
     ("HAR", model_folders["econom"], f"har_h{orizzonte}_con_PM.csv", f"har_h{orizzonte}_senza_PM.csv"),
@@ -33,9 +37,9 @@ pairs = [
 ]
 
 
-# -----------------------------
-# LOSS FUNCTIONS (MSE & QLIKE)
-# -----------------------------
+# -------------------------------
+# FUNZIONI DI LOSS (MSE & QLIKE)
+# -------------------------------
 def compute_mse_loss(actual, forecast):
     return (actual - forecast) ** 2
 
@@ -43,30 +47,39 @@ def compute_qlike_loss(actual, forecast):
     return (actual / forecast) - np.log(actual / forecast) - 1
 
 
-# -------------------------
-# RUN DIEBOLD-MARIANO TEST 
-# -------------------------
+# --------------------------------
+# ESECUZIONE TEST DIEBOLD-MARIANO 
+# --------------------------------
 results_mse = []
 results_qlike = []
 
 for model_label, folder, file_con, file_senza in pairs:
-    # Load the "with PM" and "without PM" files
+    # Caricamento file "con PM" e "senza PM"
     df_con = pd.read_csv(folder / file_con).dropna().set_index("Date")
     df_senza = pd.read_csv(folder / file_senza).dropna().set_index("Date")
-    
-    # Align by date
+    df_con.index = pd.to_datetime(df_con.index, format="mixed", dayfirst=True)
+    df_senza.index = pd.to_datetime(df_senza.index, format="mixed", dayfirst=True)
+    df_con = df_con.sort_index()
+    df_senza = df_senza.sort_index()
+
+    # Allineamento per data
     common_idx = df_con.index.intersection(df_senza.index)
     df_con = df_con.loc[common_idx]
     df_senza = df_senza.loc[common_idx]
+
+    if not np.allclose(
+        df_con["Actual"].values, df_senza["Actual"].values, rtol=0, atol=1e-5
+    ):
+        raise ValueError(f"I valori Actual non coincidono per {model_label}.")
     
     act = df_con["Actual"].values
     pred_con = df_con["Forecast"].values
     pred_senza = df_senza["Forecast"].values
     
-    # -------------
-    # RUN MSE TEST
-    # -------------
-    # Use variance_estimator='bartlett' to avoid negative variances at h=22
+    # ---------------------
+    # CALCOLO TEST PER MSE
+    # ---------------------
+    # Usiamo variance_estimator='bartlett' per evitare varianze negative a h=22
     try:
         stat_mse, p_val_mse = dm_test(act, pred_con, pred_senza, h=orizzonte, variance_estimator='bartlett')
     except Exception as e:
@@ -78,18 +91,19 @@ for model_label, folder, file_con, file_senza in pairs:
     mean_mse_senza = np.mean(loss_mse_senza)
     
     results_mse.append({
-        "Model": model_label,
-        "MSE (with PM)": mean_mse_con,
-        "MSE (without PM)": mean_mse_senza,
-        "Diff Loss (%)": ((mean_mse_con - mean_mse_senza) / mean_mse_senza) * 100,
+        "Modello": model_label,
+        "N date comuni": len(common_idx),
+        "MSE con PM (date comuni)": mean_mse_con,
+        "MSE senza PM (date comuni)": mean_mse_senza,
+        "Diff Loss (%) (date comuni)": ((mean_mse_con - mean_mse_senza) / mean_mse_senza) * 100,
         "Stat DM": stat_mse,
         "p-value": p_val_mse,
-        "Significant (alpha=0.05)": "Sì ***" if (pd.notna(p_val_mse) and p_val_mse < 0.05) else "No"
+        "Significativo (alpha=0.05)": "Sì ***" if (pd.notna(p_val_mse) and p_val_mse < 0.05) else "No"
     })
     
-    # ---------------
-    # RUN QLIKE TEST
-    # ---------------
+    # -----------------------
+    # CALCOLO TEST PER QLIKE
+    # -----------------------
     loss_qlike_con = compute_qlike_loss(act, pred_con)
     loss_qlike_senza = compute_qlike_loss(act, pred_senza)
     zeros = np.zeros_like(act)
@@ -103,25 +117,25 @@ for model_label, folder, file_con, file_senza in pairs:
     mean_qlike_senza = np.mean(loss_qlike_senza)
     
     results_qlike.append({
-        "Model": model_label,
-        "QLIKE (with PM)": mean_qlike_con,
-        "QLIKE (without PM)": mean_qlike_senza,
-        "Diff Loss (%)": ((mean_qlike_con - mean_qlike_senza) / mean_qlike_senza) * 100,
+        "Modello": model_label,
+        "QLIKE (con PM)": mean_qlike_con,
+        "QLIKE (senza PM)": mean_qlike_senza,
+        "Diff Loss (%) (date comuni)": ((mean_qlike_con - mean_qlike_senza) / mean_qlike_senza) * 100,
         "Stat DM": stat_qlike,
         "p-value": p_val_qlike,
-        "Significant (alpha=0.05)": "Sì ***" if (pd.notna(p_val_qlike) and p_val_qlike < 0.05) else "No"
+        "Significativo (alpha=0.05)": "Sì ***" if (pd.notna(p_val_qlike) and p_val_qlike < 0.05) else "No"
     })
 
-# --------------
-# PRINT RESULTS
-# --------------
+# -----------------
+# STAMPA RISULTATI
+# -----------------
 print(f"\n==================================================================")
-print(f" DIEBOLD-MARIANO TEST (library 'dieboldmariano') - Forecast horizon h = {orizzonte}")
-print(f" 1-vs-1 comparison: Same model (with PM vs without PM)")
+print(f" DIEBOLD-MARIANO TEST (libreria 'dieboldmariano') - Orizzonte h = {orizzonte}")
+print(f" Confronto 1-vs-1: Stesso Modello (Con PM vs Senza PM)")
 print(f"==================================================================")
 
-print("\n--- MSE RESULTS ---")
+print("\n--- RISULTATI PER MSE ---")
 print(pd.DataFrame(results_mse).to_string(index=False))
 
-print("\n--- QLIKE RESULTS ---")
+print("\n--- RISULTATI PER QLIKE ---")
 print(pd.DataFrame(results_qlike).to_string(index=False))
