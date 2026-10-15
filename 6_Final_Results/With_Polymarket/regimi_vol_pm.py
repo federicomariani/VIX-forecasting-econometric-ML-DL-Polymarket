@@ -7,7 +7,7 @@ from pathlib import Path
 # ---------------
 # IMPORT DATASET
 # ---------------
-orizzonte = 22 # Da cambiare ad ogni run (1, 5 e 22)
+orizzonte = 1 # Da cambiare ad ogni run (1, 5 e 22)
 
 project_root = Path(__file__).resolve().parent.parent.parent
 forecasts_root = project_root / "5_Forecasts_&_Error_Metrics" / "With_Polymarket"
@@ -123,8 +123,8 @@ for file in forecast_files:
         qlike = np.mean((y_true / y_predicted) - np.log(y_true / y_predicted)- 1)
 
         # Direzione reale e prevista rispetto al VIX osservato all'origine del forecast.
-        actual_direction = np.sign(dataset["Actual"] - dataset["Close_VIX"])
-        predicted_direction = np.sign(dataset["Forecast"] - dataset["Close_VIX"])
+        actual_direction = dataset["Actual"] > dataset["Close_VIX"]
+        predicted_direction = dataset["Forecast"] > dataset["Close_VIX"]
         regime_mask = dataset["Volatility Regime"] == regime
         directional_accuracy = (
             actual_direction[regime_mask] == predicted_direction[regime_mask]

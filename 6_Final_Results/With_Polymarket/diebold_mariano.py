@@ -109,7 +109,7 @@ for model_label, folder, file_con, file_senza in pairs:
     zeros = np.zeros_like(act)
     
     try:
-        stat_qlike, p_val_qlike = dm_test(zeros, loss_qlike_con, loss_qlike_senza, h=orizzonte, variance_estimator='bartlett')
+        stat_qlike, p_val_qlike = dm_test(zeros, loss_qlike_con, loss_qlike_senza, h=orizzonte, variance_estimator='bartlett', loss=lambda actual, forecast: forecast)
     except Exception as e:
         stat_qlike, p_val_qlike = np.nan, np.nan
         

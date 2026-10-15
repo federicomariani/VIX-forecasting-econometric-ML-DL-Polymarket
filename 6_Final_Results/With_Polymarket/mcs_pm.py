@@ -4,6 +4,7 @@ from pathlib import Path
 from model_confidence_set import ModelConfidenceSet
 
 
+
 # ---------------
 # IMPORT DATASET
 # ---------------
@@ -11,15 +12,15 @@ orizzonte = 22  # Da cambiare ad ogni run (1, 5 e 22)
 
 # Cambia da solo il path quando si cambia orizzonte
 econometric_path = Path(
-    rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Modelli_econometrici\h{orizzonte}"
+    rf"C:\Users\fede1\Desktop\Istruzione\2. Università\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Modelli_econometrici\h{orizzonte}"
 )
 
 ml_path = Path(
-    rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}"
+    rf"C:\Users\fede1\Desktop\Istruzione\2. Università\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}"
 )
 
 dl_path = Path(
-    rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning\h{orizzonte}"
+    rf"C:\Users\fede1\Desktop\Istruzione\2. Università\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning\h{orizzonte}"
 )
 
 files = {
@@ -125,22 +126,36 @@ if losses_mse.empty or losses_qlike.empty:
 # ---------------------
 # MODEL CONFIDENCE SET
 # ---------------------
-def run_mcs(losses, label):
+def run_mcs(losses, label, horizon):
+    T = len(losses)
+    block_len = max(horizon, int(np.ceil(np.sqrt(T))))
+
+    if block_len >= T:
+        raise ValueError(
+            f"Campione troppo corto: T={T}, block_len={block_len}"
+        )
+
     print(f"\n=== Model Confidence Set - {label} ===")
+    print(f"Osservazioni comuni: {T}")
+    print(f"Bootstrap replications: 5000")
+    print(f"Block length: {block_len}")
+
     mcs = ModelConfidenceSet(
         losses,
         n_boot=5000,
         alpha=0.05,
+        block_len=block_len,
         method="R",
     )
+
     mcs.compute()
     results = mcs.results()
     print(results)
     return results
 
 
-results_mse = run_mcs(losses_mse, "MSE")
-results_qlike = run_mcs(losses_qlike, "QLIKE")
+results_mse = run_mcs(losses_mse, "MSE", orizzonte)
+results_qlike = run_mcs(losses_qlike, "QLIKE", orizzonte)
 
 
 # -----------------------------------------------------------------
