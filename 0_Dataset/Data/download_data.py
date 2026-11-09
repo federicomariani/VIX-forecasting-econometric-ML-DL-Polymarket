@@ -1,3 +1,6 @@
+import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -60,7 +63,7 @@ dataset["Close_DXY"] = dxy_data["Close"]
 dataset["Log_Return_DXY"] = np.log(dataset["Close_DXY"] / dataset["Close_DXY"].shift(1)) 
 
 # Treasury Yield USA 10Y and 3m
-tbill_3m = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Raw\tbill_3m.csv", parse_dates = ["observation_date"])
+tbill_3m = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Raw\tbill_3m.csv"), parse_dates = ["observation_date"])
 tbill_3m.rename(columns={"observation_date" : "Date", "TB3MS" : "Close_Tbill_3m"}, inplace = True)
 tbill_3m["Date"] = pd.to_datetime(tbill_3m["Date"])
 tbill_3m = tbill_3m.sort_values("Date")
@@ -70,7 +73,7 @@ tbill_3m["Close_Tbill_3m"] = tbill_3m["Close_Tbill_3m"].ffill()
 
 dataset["Close_Tbill_3m"] = tbill_3m["Close_Tbill_3m"].reindex(dataset.index).ffill()
 
-tyield_10y = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Raw\tyield_10y.csv", parse_dates = ["observation_date"])
+tyield_10y = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Raw\tyield_10y.csv"), parse_dates = ["observation_date"])
 tyield_10y.rename(columns={"observation_date" : "Date", "DGS10" : "Close_Tyield_10y"}, inplace = True)
 tyield_10y = tyield_10y.set_index("Date")
 
@@ -81,7 +84,7 @@ dataset["Yield_curve"] = dataset["Close_Tyield_10y"] - dataset["Close_Tbill_3m"]
 
 
 # Credit Spread (Baa Corporate Bond - 10-year Treasury) (Moody's)
-credit_spread = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Raw\credit_spread.csv", parse_dates = ["observation_date"])
+credit_spread = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Raw\credit_spread.csv"), parse_dates = ["observation_date"])
 credit_spread.rename(columns={"observation_date" : "Date", "BAA10Y" : "Credit_Spread"}, inplace = True)
 credit_spread["Date"] = pd.to_datetime(credit_spread["Date"])
 credit_spread = credit_spread.sort_values("Date")
@@ -93,7 +96,7 @@ dataset["Credit_Spread"] = credit_spread["Credit_Spread"].reindex(dataset.index)
 
 
 # Jobless claims weekly 
-initial_claims = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Raw\initial_claims.csv", parse_dates = ["observation_date"])
+initial_claims = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Raw\initial_claims.csv"), parse_dates = ["observation_date"])
 initial_claims.rename(columns = {"observation_date" : "Date", "ICSA" : "Close_Initial_claims"}, inplace = True)
 initial_claims["Date"] = pd.to_datetime(initial_claims["Date"])
 initial_claims = initial_claims.sort_values("Date")
@@ -118,7 +121,7 @@ dataset["Weekday"] = dataset.index.dayofweek # 0 = Monday; 1 = Tuesday; ...; Fri
 
 # Save dataset
 dataset = dataset.dropna()
-dataset.to_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv", index = True)
+dataset.to_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Clean\dataset.csv"), index = True)
 
 
 # ---------------------------------------

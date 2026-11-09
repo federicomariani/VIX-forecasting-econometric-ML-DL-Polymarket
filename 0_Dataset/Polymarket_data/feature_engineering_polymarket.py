@@ -1,3 +1,6 @@
+import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
 import pandas as pd
 import numpy as np
 import os
@@ -74,7 +77,7 @@ df_cpi = df_cpi.dropna()
 # MERGE DATASETS
 # ---------------
 evento = "df_polymarket"
-output_folder = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\Clean" 
+output_folder = os.path.join(REPO_DIR, r"0_Dataset\Polymarket_data\Clean") 
 file_output = f"{output_folder}/{evento}.csv"
 
 dataframes = [df_fomc, df_us_recession, df_cpi]
@@ -97,10 +100,10 @@ df_polymarket.to_csv(file_output, index = True)
 # MERGE POLYMARKET + TRADITIONAL DATASET
 # ---------------------------------------
 evento_2 = "dataset_w_polymarket"
-output_folder_2 = r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data" 
+output_folder_2 = os.path.join(REPO_DIR, r"0_Dataset\Polymarket_data") 
 file_output_2 = f"{output_folder_2}/{evento_2}.csv"
 
-df_tradizionale = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset_adj_x_polymarket.csv")
+df_tradizionale = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Clean\dataset_adj_x_polymarket.csv"))
 df_tradizionale["Date"] = pd.to_datetime(df_tradizionale["Date"], dayfirst=True)
 df_tradizionale.set_index("Date", inplace=True)
 df_tradizionale.sort_index(inplace=True)

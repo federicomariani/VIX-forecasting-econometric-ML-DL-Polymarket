@@ -1,3 +1,6 @@
+import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
 from xgboost import XGBRegressor
 import pandas as pd
 import numpy as np
@@ -18,7 +21,7 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\dataset_w_polymarket.csv", index_col=["Date"])
+dataset = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Polymarket_data\dataset_w_polymarket.csv"), index_col=["Date"])
 
 
 # -----------------
@@ -31,10 +34,10 @@ dataset.index = pd.to_datetime(
 )
 
 # Forecast horizons: 1, 5, and 22 days
-orizzonte = 22
+orizzonte = int(sys.argv[1]) if len(sys.argv) > 1 else 22 # 1, 5 or 22, from the command line
 
 # With or without PM
-evento = "con_PM" # Change to "con_PM" when using Polymarket features
+evento = sys.argv[2] if len(sys.argv) > 2 else "con_PM" # "con_PM" or "senza_PM", from the command line
 
 # Create the target shifted forward by h days (direct multi-step forecast)
 target_col = f"Close_VIX_h{orizzonte}"
@@ -75,7 +78,7 @@ target = [target_col] # Dependent variable
 # DATA MANIPULATION
 # ------------------
 # Split the matrices into training, validation, and test sets
-X = dataset_h[predittori_w_pm] # change to predittori_w_pm when using Polymarket features
+X = dataset_h[predittori_w_pm if evento == "con_PM" else predittori] # same matched sample in both cases
 y = dataset_h[target_col]
 
 n_observations = len(X)
@@ -295,7 +298,7 @@ print(importance_bo)
 # ----------------------------------------------------------------------
 # Select features based on SHAP after Grid Search CV
 ranked_features_cv = importance_cv["Feature"].tolist()
-feature_sizes_cv = list(range(17, 4, -1)) # 17 = least important feature
+feature_sizes_cv = list(range(len(predittori), 4, -1))
 
 results_features_cv = []
 
@@ -350,7 +353,7 @@ print(best_features_cv)
 
 # Select features based on SHAP after Bayesian Optimization
 ranked_features_bo = importance_bo["Feature"].tolist()
-feature_sizes_bo = list(range(17, 4, -1))
+feature_sizes_bo = list(range(len(predittori), 4, -1))
 
 results_features_bo = []
 
@@ -459,7 +462,7 @@ y_true_backtest_cv = pd.Series(
 )
 
 # Common folder where all model files save their results
-output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning"
+output_dir = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}")
 os.makedirs(output_dir, exist_ok=True)
 
 # Save forecasts and actual values for the Grid Search variant, for subsequent Model Confidence Set and Diebold-Mariano tests
@@ -570,7 +573,7 @@ print(f"Directional Accuracy: {directional_accuracy_bo:.2f}%")
 # ------------------------------------
 # PLOTS: ACTUAL VIX VS FORECASTED VIX  
 # ------------------------------------
-output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning"
+output_dir_grafici = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}")
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 # Plot with Grid Search CV optimization

@@ -1,3 +1,6 @@
+import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
 import pandas as pd
 import statsmodels.api as sm
 import numpy as np
@@ -11,7 +14,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolu
 # DATASET IMPORT AND CLEANING 
 # ----------------------------
 dataset = pd.read_csv(
-    r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv",
+    os.path.join(REPO_DIR, r"0_Dataset\Data\Clean\dataset.csv"),
     index_col="Date",
     parse_dates=["Date"],
 )
@@ -267,7 +270,7 @@ def run_har_vix(h):
     # ----------
     # SAVE PLOT
     # ----------
-    graph_path = (rf"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici\har_h{h}.png")
+    graph_path = (os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici\har_h{h}.png"))
     
     os.makedirs(os.path.dirname(graph_path), exist_ok=True)
     plt.savefig(graph_path, dpi=300, bbox_inches="tight")
@@ -279,7 +282,7 @@ def run_har_vix(h):
 # ------------------------------
 # FOLDER FOR SAVING CSV RESULTS
 # ------------------------------
-output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici"
+output_dir = os.path.join(REPO_DIR, r"5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici")
 os.makedirs(output_dir, exist_ok=True)
 
 

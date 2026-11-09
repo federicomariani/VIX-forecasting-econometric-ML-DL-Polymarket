@@ -1,3 +1,6 @@
+import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
 # This model is identical to the model in the file "random_forest",
 # with the only difference that here all VIX lags up to 22 days are considered,
 # whereas in the other model only the VIX lags at 1, 5 and 22 business days are used
@@ -26,7 +29,7 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Clean\dataset.csv"), index_col=["Date"])
 
 
 # -----------------
@@ -38,7 +41,7 @@ for lag in range(1, 23):
     dataset[f"VIX_lag{lag}"] = dataset["Close_VIX"].shift(lag)
 
 # Forecast horizon 1, 5 and 22 days
-orizzonte = 22 # Change manually for each run
+orizzonte = int(sys.argv[1]) if len(sys.argv) > 1 else 22 # 1, 5 or 22, from the command line
 
 # Create target shifted forward by h days (direct multi-step forecasting)
 target_col = f"Close_VIX_h{orizzonte}"
@@ -50,7 +53,7 @@ dataset[target_date_col] = dataset.index.to_series().shift(-orizzonte)
 
 # Create the matrix of independent variables and the dependent-variable vector
 predittori = ["Log_Return_S&P500", "Log_Return_WTI", "Close_OVX", "OVX_VIX_spread",
-              *vix_lags, "RSI_14d", "Log_Return_DXY", "Yield_curve", 
+              *vix_lags, "RSI_14d", "Log_Return_DXY", "Yield_curve",
               "Log_difference_initial_claims", "VIX_MA5", "VIX_MA10", "VIX_MA22",
               "Credit_Spread", "Log_Return_Gold", "Weekday"] 
 target = [target_col] # Dependent variable
@@ -480,7 +483,7 @@ y_true_backtest_cv = pd.Series(
 )
 
 # Shared folder where all model files save their results
-output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
+output_dir = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\Normale\Machine_Learning\h{orizzonte}\v2")
 os.makedirs(output_dir, exist_ok=True)
 
 # Save actual and forecast values for the Grid-Search variant so Model Confidence Set and Diebold-Mariano tests can be run later
@@ -604,7 +607,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # one tick every m
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # format like "Jan 2022"
 fig.autofmt_xdate(rotation=45)                                # rotate labels to avoid overlap
 
-output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Machine_Learning"
+output_dir_grafici = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\Normale\Machine_Learning\h{orizzonte}\v2")
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"Actual VIX vs Forecast VIX (Test Set) with hyperparameter optimization via Grid Search CV h = {orizzonte}, v2")

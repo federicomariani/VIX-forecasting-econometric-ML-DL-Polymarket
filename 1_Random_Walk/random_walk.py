@@ -33,9 +33,14 @@ oos_end = pd.Timestamp("2026-06-30")
 # -------------------
 # CARTELLA RISULTATI
 # -------------------
-output_dir = (r"C:\Users\fede1\Desktop\Istruzione\2. Università\Repo\5_Forecasts_&_Error_Metrics\Normale\Modelli_econometrici")
+# Percorso relativo alla radice della repo, indipendente dal PC su cui gira lo script.
+# I CSV finiscono in .../Modelli_econometrici/h{h}/, dove li leggono mcs.py e diebold_mariano.py.
+repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+output_dir = os.path.join(repo_dir, "5_Forecasts_&_Error_Metrics", "Normale", "Modelli_econometrici")
 
-os.makedirs(output_dir, exist_ok=True)
+# False = stampa solo le metriche, senza sovrascrivere le previsioni salvate
+# (i dati scaricati oggi da Yahoo Finance possono differire leggermente da quelli originali).
+SALVA_CSV = False
 
 
 # --------------------
@@ -61,7 +66,12 @@ def run_random_walk(h):
     mape = (mean_absolute_percentage_error(results["y_true"], results["y_pred"]) * 100)
     qlike = np.mean((results["y_true"] / results["y_pred"]) - np.log(results["y_true"] / results["y_pred"]) - 1)
 
-    # R^2 di Mincer-Zarnowitz (MZ)
+    # R^2 out-of-sample, calcolato come per gli altri modelli: 1 - SSE/SST
+    ss_res = np.sum((results["y_true"] - results["y_pred"]) ** 2)
+    ss_tot = np.sum((results["y_true"] - results["y_true"].mean()) ** 2)
+    r2_oos = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
+
+    # R^2 di Mincer-Zarnowitz (MZ), solo come diagnostica: non è confrontabile con l'R^2 OOS
     X = sm.add_constant(results["y_pred"], has_constant="add")
     model_mz = sm.OLS(results["y_true"], X).fit()
     r2_mz = model_mz.rsquared
@@ -84,7 +94,8 @@ def run_random_walk(h):
     print(f"MAE h_{h}: {mae:.6f}")
     print(f"MAPE h_{h}: {mape:.6f}%")
     print(f"QLIKE h_{h}: {qlike:.6f}")
-    print(f"R^2 MZ h_{h}: {r2_mz:.6f}")
+    print(f"R^2 OOS h_{h}: {r2_oos:.6f}")
+    print(f"R^2 MZ h_{h} (diagnostica): {r2_mz:.6f}")
     print(f"Directional Accuracy h_{h}: {directional_accuracy:.2f}%")
 
     # File CSV contenente forecasts
@@ -97,8 +108,10 @@ def run_random_walk(h):
     df_out.index = results.index
     df_out.index.name = "Date"
 
-    csv_path = os.path.join(output_dir, f"randomwalk_h{h}.csv")
-    df_out.to_csv(csv_path)
+    if SALVA_CSV:
+        h_dir = os.path.join(output_dir, f"h{h}")
+        os.makedirs(h_dir, exist_ok=True)
+        df_out.to_csv(os.path.join(h_dir, f"randomwalk_h{h}.csv"))
 
 
 results_rw_h1 = run_random_walk(1)

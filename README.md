@@ -1,4 +1,4 @@
-# Forecasting the VIX Index: A Multi-Horizon Benchmark AcrossEconometric, Machine Learning and Deep Learning Models withPrediction Market Signals
+# Forecasting the VIX Index: A Multi-Horizon Benchmark Across Econometric, Machine Learning and Deep Learning Models with Prediction Market Signals
 
 ## Authors
 - Federico Mariani
@@ -10,15 +10,27 @@
 This study compares forecasting models for the CBOE Volatility Index (VIX) belonging to four model families:
 
 - **Random Walk** (benchmark)
-- **Econometric** (ARIMA(1,1,1), HAR-Type)
+- **Econometric** (HAR and HAR-X)
 - **Machine Learning** (Random Forest, XGBoost)
 - **Deep Learning** (LSTM, Temporal Fusion Transformer)
 
 The models are evaluated across three forecasting horizons (**1, 5, and 22 days**), using the same time period for all models.
 
-An original contribution of this paper is the integration of features derived from prediction markets (**Polymarket** - FOMC interest rate decisions, US recession probabilities, and year-over-year CPI inflation) into the econometric, Machine Learning, and Deep Learning models, in order to assess whether the probabilities implied by these markets provide additional useful information for forecasting. For each model, two runs are therefore performed: **“with PM”** and **“without PM”**, which are then compared against each other.
+An original contribution of this paper is the integration of features derived from prediction markets (**Polymarket** - FOMC interest rate decisions, US recession probabilities, and year-over-year CPI inflation) into the econometric, Machine Learning, and Deep Learning models, in order to assess whether the probabilities implied by these markets provide additional useful information for forecasting. For each model, two runs are therefore performed: **"with PM"** and **"without PM"**, which are then compared against each other.
 
-The models are optimized using both **Grid Search** and **Bayesian Optimization** and evaluated using point forecast accuracy metrics (MSE, MAE, MAPE, R², and QLIKE), Directional Accuracy, **Diebold–Mariano tests**, and the **Model Confidence Set (MCS)** procedure. The analysis is also conducted across different volatility regimes (**Low / Medium / High**).
+The models are optimized using both **Grid Search** and **Bayesian Optimization** and evaluated using point forecast accuracy metrics (MSE, MAE, MAPE, R², and QLIKE), Directional Accuracy, **Diebold–Mariano tests** with Holm and Benjamini–Hochberg adjustments, and the **Model Confidence Set (MCS)** procedure. The analysis is also conducted across different volatility regimes (**Low / Medium / High**).
+
+## Version 3 (results in the paper)
+
+The results reported in the paper come from the `*_v3.py` scripts. Compared with the first version:
+
+- **Common information set.** HAR-X, Random Forest, XGBoost, LSTM and TFT all use the same predictors: the HAR components of the VIX at the forecast origin (V_t, its 5-day and 22-day averages) plus the financial, energy and macroeconomic variables. In the Polymarket analysis the Polymarket features are added to this set. The weekday dummy is no longer used.
+- **HAR-X.** New script `har_type_v3.py` (and `har_type_pm_v3.py`): the HAR model augmented with the same exogenous variables, estimated by OLS on the same rolling window.
+- **Deep Learning.** Lookback of 5 trading days. The first version of the Polymarket LSTM/TFT scripts did not include `Close_VIX` among the inputs; this is fixed in the v3 scripts.
+- **ARIMA removed.** The ARIMA(1,1,1) model and its outputs are no longer part of the comparison.
+- **Evaluation.** The scripts `mcs.py`, `regimi_vol.py` and `With_Polymarket/*.py` of the first version are replaced by `6_Final_Results/evaluation_v3.py` (metrics, regimes, MCS, Diebold–Mariano tests) and `6_Final_Results/make_tables_v3.py` (LaTeX tables and regime figures).
+
+The v3 scripts write their outputs in a `v3/` subfolder of each horizon folder, so the first-version outputs are kept. The Random Walk (`randomwalk_h*.csv`) and the plain HAR (`har_h*.csv`) forecasts used in the paper are those produced by `random_walk.py` and `har_type.py` / `har_type_pm.py`.
 
 ## Repository Structure
 
@@ -26,10 +38,6 @@ The models are optimized using both **Grid Search** and **Bayesian Optimization*
 ├── 0_Dataset/
 │   ├── Data/
 │   │   ├── Raw/                                      # Raw macroeconomic time series from FRED (CSV)
-│   │   │   ├── credit_spread.csv
-│   │   │   ├── initial_claims.csv
-│   │   │   ├── tbill_3m.csv
-│   │   │   └── tyield_10y.csv
 │   │   ├── Clean/
 │   │   │   ├── dataset.csv                           # Final dataset used by models without Polymarket features
 │   │   │   ├── dataset_adj_x_polymarket.csv          # Final dataset adjusted to match the length of the Polymarket dataset
@@ -38,9 +46,6 @@ The models are optimized using both **Grid Search** and **Bayesian Optimization*
 │   │
 │   └── Polymarket_data/
 │       ├── Raw/                                      # Raw data downloaded from Polymarket public APIs, organized by event
-│       │   ├── 0_FOMC_Interest_Rates/                # Separate subfolders for each FOMC meeting (2025–2026)
-│       │   ├── 1_US_Recession/                       # US recession prediction markets for 2025 and 2026
-│       │   └── 2_CPI_YoY/                            # Year-over-year CPI inflation prediction markets, organized by month
 │       ├── Clean/                                    # Cleaned Polymarket data, including the aggregated df_polymarket.csv file
 │       ├── dataset_w_polymarket.csv                  # Final dataset combining traditional features with Polymarket-derived features
 │       ├── download_data_polymarket.py               # Downloads data through Polymarket's public APIs
@@ -53,62 +58,71 @@ The models are optimized using both **Grid Search** and **Bayesian Optimization*
 │   └── random_walk.py                                # Random Walk benchmark model
 │
 ├── 2_Econometrics/
-│   ├── 1_ARIMA(1,1,1)/
-│   │   ├── arima.py                                  # ARIMA model without Polymarket features
-│   │   └── arima_pm.py                               # ARIMA model with Polymarket features
 │   └── 2_HAR-Type/
-│       ├── har_type.py                               # HAR-Type model without Polymarket features
-│       └── har_type_pm.py                            # HAR-Type model with Polymarket features
+│       ├── har_type.py                               # HAR model without Polymarket features
+│       ├── har_type_pm.py                            # HAR model with Polymarket features
+│       ├── har_type_v3.py                            # HAR-X (v3) without Polymarket features
+│       └── har_type_pm_v3.py                         # HAR-X (v3) with Polymarket features
 │
 ├── 3_Machine_Learning/
 │   ├── 1_Random_Forest/
-│   │   ├── random_forest.py                          # Random Forest using VIX lags of 1, 5, and 22 days
-│   │   ├── random_forest_pm.py                       # Random Forest with Polymarket features
-│   │   └── random_forest_v2.py                       # Random Forest variant using all VIX lags up to 22 days
+│   │   ├── random_forest.py / random_forest_pm.py    # First version
+│   │   ├── random_forest_v2.py                       # Variant using the 22 most recent daily VIX values
+│   │   ├── random_forest_v3.py                       # v3, without Polymarket features
+│   │   └── random_forest_pm_v3.py                    # v3, with Polymarket features
 │   └── 2_XGBoost/
-│       ├── xgboost_model.py                          # XGBoost model without Polymarket features
-│       ├── xgboost_pm.py                             # XGBoost model with Polymarket features
-│       └── xgboost_v2.py                             # XGBoost variant using the alternative lag specification
+│       ├── xgboost_model.py / xgboost_pm.py          # First version
+│       ├── xgboost_v2.py                             # Variant using the 22 most recent daily VIX values
+│       ├── xgboost_v3.py                             # v3, without Polymarket features
+│       └── xgboost_pm_v3.py                          # v3, with Polymarket features
 │
 ├── 4_Deep_Learning/
 │   ├── 1_LSTM/
-│   │   ├── lstm.py                                   # LSTM model without Polymarket features
-│   │   └── lstm_pm.py                                # LSTM model with Polymarket features
+│   │   ├── lstm.py / lstm_pm.py                      # First version
+│   │   ├── lstm_v3.py                                # v3, without Polymarket features
+│   │   └── lstm_pm_v3.py                             # v3, with Polymarket features
 │   └── 2_TFT/
-│       ├── tft.py                                    # Temporal Fusion Transformer implemented using pytorch-forecasting, without Polymarket features
-│       └── tft_pm.py                                 # Temporal Fusion Transformer with Polymarket features
+│       ├── tft.py / tft_pm.py                        # First version (pytorch-forecasting)
+│       ├── tft_v3.py                                 # v3, without Polymarket features
+│       └── tft_pm_v3.py                              # v3, with Polymarket features
 │
-├── 5_Forecasts_&_Error_Metrics/                      # Stores forecasts, evaluation metrics, plots, and hyperparameter tuning results for each model
-│   ├── Normale/                                      # Results from runs without Polymarket features
-│   │   ├── Modelli_econometrici/{h1,h5,h22}/         # Econometric model results for the 1-, 5-, and 22-day forecasting horizons
-│   │   ├── Machine_Learning/{h1,h5,h22}/[v2/]        # Machine Learning results, including alternative v2 specifications where applicable
-│   │   └── Deep_Learning/{h1,h5,h22}/                # Deep Learning results for each forecasting horizon
-│   └── With_Polymarket/                              # Results for runs with Polymarket features, organized using the same structure
-│       ├── Modelli_econometrici/{h1,h5,h22}/         # Econometric model results for each forecasting horizon
-│       ├── Machine_Learning/{h1,h5,h22}/             # Machine Learning results for each forecasting horizon
-│       └── Deep_Learning/{h1,h5,h22}/                # Deep Learning results for each forecasting horizon
+├── 5_Forecasts_&_Error_Metrics/                      # Forecasts, evaluation metrics, plots and hyperparameter tuning results
+│   ├── Normale/                                      # Runs without Polymarket features
+│   │   ├── Modelli_econometrici/{h1,h5,h22}/[v3/]
+│   │   ├── Machine_Learning/{h1,h5,h22}/[v2/,v3/]
+│   │   └── Deep_Learning/{h1,h5,h22}/[v3/]
+│   └── With_Polymarket/                              # Runs with Polymarket features, same structure
+│       ├── Modelli_econometrici/{h1,h5,h22}/[v3/]
+│       ├── Machine_Learning/{h1,h5,h22}/[v3/]
+│       └── Deep_Learning/{h1,h5,h22}/[v3/]
 │
-└── 6_Final_Results/                                  # Final comparative evaluation of all models
-    ├── metriche.py                                   # Calculates MSE, MAE, MAPE, R², QLIKE, and Directional Accuracy
-    ├── regimi_vol.py                                 # Evaluates model performance across Low, Medium, and High volatility regimes
-    ├── mcs.py                                        # Implements the Model Confidence Set (MCS) procedure
-    ├── Results/                                      # Stores standard evaluation outputs
-    │   ├── stats_models_h*.png                       # Comparative model performance statistics for each forecasting horizon
-    │   ├── mcs_h*.png                                # Model Confidence Set results for each forecasting horizon
-    │   └── vol_regime_h*.csv                         # Evaluation metrics by volatility regime
-    └── With_Polymarket/                              # Comparative evaluation incorporating Polymarket features
-        ├── metriche_pm.py                            # Calculates evaluation metrics for models using Polymarket features
-        ├── regimi_vol_pm.py                          # Evaluates performance across volatility regimes with Polymarket features
-        ├── mcs_pm.py                                 # Applies the Model Confidence Set procedure to the Polymarket analysis
-        ├── diebold_mariano.py                        # Performs Diebold–Mariano tests comparing forecasts with and without Polymarket features
-        └── Results/                                  # Stores plots and statistical results from the Polymarket comparison
-            ├── dm_h*.png                             # Diebold–Mariano test results for each forecasting horizon
-            ├── mcs_mse_h*.png                        # MCS results based on MSE for each forecasting horizon
-            ├── mcs_qlike_h*.png                      # MCS results based on QLIKE for each forecasting horizon
-            └── stats_models_pm_h*.png                # Comparative model performance statistics including Polymarket features
+└── 6_Final_Results/
+    ├── evaluation_v3.py                              # Metrics, volatility regimes, MCS and Diebold–Mariano tests (v3)
+    ├── make_tables_v3.py                             # LaTeX tables and regime figures from the outputs of evaluation_v3.py
+    └── Results/v3/
+        ├── metrics_full.csv                          # MSE, MAE, MAPE, R², QLIKE and DA, full sample
+        ├── regimes_full.csv                          # Metrics by volatility regime, full sample
+        ├── mcs_full.csv                              # MCS p-values, full sample (MSE and QLIKE)
+        ├── dm_pm.csv                                 # Diebold–Mariano tests, with vs without Polymarket, with Holm and BH adjustments
+        ├── losses_pm.csv                             # MSE and QLIKE, with vs without Polymarket
+        ├── mcs_pm.csv                                # MCS p-values, Polymarket sample
+        ├── regimes_pm.csv                            # Metrics by volatility regime, Polymarket sample
+        ├── tables_v3.tex                             # Tables of the paper
+        └── vol_regimes_v3.png, vol_regimes_pm_v3.png # Regime figures of the paper
 ```
 
-Each `*_pm.py` script corresponds to its namesake script, trained with the additional Polymarket features. Each forecasting horizon folder (`h1`, `h5`, `h22`) contains the results of Grid Search (`*_gridsearch_*.csv`) and Bayesian Optimization (`*_bayesoptimization_*.csv`), together with cross-validation plots and forecast-versus-actual plots.
+In the Polymarket folders, file names end in `_con_PM` (with Polymarket features) or `_senza_PM` (same sample, without Polymarket features). In the v3 Machine Learning Polymarket folders the Bayesian Optimization files are named `*_bayesopt_*` instead of `*_bayesoptimization_*`, to keep the full paths below the Windows limit of 260 characters.
+
+## How to run (v3)
+
+1. `0_Dataset/`: build the datasets (only needed to update the data).
+2. `1_Random_Walk/random_walk.py`, `2_Econometrics/2_HAR-Type/har_type.py` and `har_type_pm.py`: Random Walk and HAR benchmarks.
+3. The `*_v3.py` scripts in `2_Econometrics/`, `3_Machine_Learning/` and `4_Deep_Learning/`. The Machine Learning and Deep Learning scripts take the horizon as first argument, and the Polymarket ones the sample as second argument, e.g. `python random_forest_pm_v3.py 5 senza_PM`; `har_type_v3.py` runs all horizons, and `har_type_pm_v3.py` takes only the sample (`con_PM` or `senza_PM`). The Polymarket scripts are run for both `con_PM` and `senza_PM`.
+4. `6_Final_Results/evaluation_v3.py`, then `6_Final_Results/make_tables_v3.py`.
+
+All paths are relative to the repository root.
+
+Main packages: `numpy`, `pandas`, `statsmodels`, `scikit-learn`, `scikit-optimize`, `boruta`, `xgboost`, `shap`, `torch`, `skorch`, `lightning`, `pytorch-forecasting`, `optuna`, `matplotlib`; for the evaluation also `dieboldmariano`, `model-confidence-set` and `numba`.
 
 ## Data
 
@@ -116,15 +130,3 @@ Each `*_pm.py` script corresponds to its namesake script, trained with the addit
 - **Macroeconomic Variables from FRED**: 3-month Treasury Bill rate, 10-year Treasury yield (used to derive the yield curve), credit spread, and initial jobless claims (`initial_claims`) — stored as CSV files in `0_Dataset/Data/Raw/`.
 - **Polymarket**: Market-implied probabilities from prediction markets covering three macroeconomic topics relevant to volatility - FOMC interest rate decisions, US recession probabilities, and year-over-year CPI inflation. The data are downloaded through Polymarket's public APIs (`download_data_polymarket.py`), cleaned in two stages (`clean_polymarket.py`, `clean_polymarket_2.py`), and transformed into model features (`feature_engineering_polymarket.py`).
 - **Final Datasets**: The dataset containing only traditional features is `0_Dataset/Data/Clean/dataset.csv`, while the dataset augmented with Polymarket features is `0_Dataset/Polymarket_data/dataset_w_polymarket.csv`.
-
-## Methodology
-
-1. **Data Collection and Cleaning** (`0_Dataset/`).
-2. **Modeling** across three forecasting horizons (1, 5, and 22 days), covering each of the four model families, with hyperparameter optimization performed using both **Grid Search** and **Bayesian Optimization** (via `scikit-optimize` / `optuna`).
-3. For the econometric, Machine Learning, and Deep Learning models, each run is performed **with and without Polymarket features** to isolate their incremental informational contribution.
-4. For Random Forest and XGBoost, a `v2` variant is also available, using all VIX lags up to 22 days instead of only the 1-, 5-, and 22-day lags.
-5. **Final Comparative Evaluation** (`6_Final_Results/`): point forecast error metrics, Directional Accuracy, volatility regime analysis, Diebold–Mariano tests comparing the with-Polymarket and without-Polymarket model pairs, and the Model Confidence Set (MCS) procedure for comparing all models.
-
-## Results
-
-Detailed results - broken down by model, forecasting horizon (1, 5, and 22 days), and with or without Polymarket features - are presented in plots and CSV files in the `5_Forecasts_&_Error_Metrics/` and `6_Final_Results/` directories, and discussed in the paper.

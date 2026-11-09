@@ -1,0 +1,745 @@
+%%% LABEL tab:backtest_results
+\begin{table}
+\scriptsize
+\setlength{\tabcolsep}{1.2pt}
+\caption{Out-of-sample forecasting performance across forecast horizons ($h \in \{1,5,22\}$ trading days), measured by mean squared error (MSE), mean absolute error (MAE) and directional accuracy (DA). DA is not reported for the RW, since its forecast implies no change in the VIX. Bold values indicate the best model for each horizon and metric.}\label{tab:backtest_results}
+\begin{tabular*}{\tblwidth}{@{} L R R R R R R R R R @{}}
+\toprule
+& \multicolumn{3}{c}{\textbf{1 day}} & \multicolumn{3}{c}{\textbf{5 days}} & \multicolumn{3}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+\textbf{Model} & \textbf{MSE} & \textbf{MAE} & \textbf{DA} & \textbf{MSE} & \textbf{MAE} & \textbf{DA} & \textbf{MSE} & \textbf{MAE} & \textbf{DA} \\
+\midrule
+RW & 3.0483 & 1.0059 & N/A & 11.3706 & 2.0412 & N/A & 23.8644 & 3.3180 & N/A \\
+HAR & \textbf{2.9198} & \textbf{0.9856} & \textbf{54.64\%} & \textbf{9.6793} & \textbf{1.9010} & \textbf{60.85\%} & \textbf{16.6034} & \textbf{2.8280} & \textbf{66.19\%} \\
+HAR-X & 2.9695 & 0.9936 & 53.46\% & 10.1702 & 1.9655 & 60.63\% & 18.8392 & 3.1119 & 63.31\% \\
+RF-GS-CV & 3.0685 & 1.0540 & 50.22\% & 11.2998 & 2.2246 & 52.93\% & 32.2175 & 4.4886 & 56.13\% \\
+RF-BO & 3.1387 & 1.0619 & 50.65\% & 11.2998 & 2.2246 & 52.93\% & 35.4169 & 4.6984 & 55.91\% \\
+XGBoost-GS-CV & 3.1086 & 1.0143 & 53.46\% & 15.1828 & 2.4796 & 53.15\% & 84.6558 & 6.0117 & 57.35\% \\
+XGBoost-BO & 3.1822 & 1.0189 & 52.92\% & 10.3609 & 2.0068 & 56.94\% & 87.0181 & 6.1916 & 56.46\% \\
+LSTM-GS-CV & 3.7069 & 1.1645 & 50.97\% & 11.0190 & 2.1770 & 54.45\% & 24.9610 & 3.8485 & 56.57\% \\
+LSTM-BO & 3.6597 & 1.1439 & 53.35\% & 10.6843 & 2.1330 & 53.90\% & 23.2481 & 3.6875 & 56.91\% \\
+TFT-GS-CV & 5.0058 & 1.2209 & 52.70\% & 11.6784 & 2.0742 & 56.40\% & 22.3697 & 3.4001 & 56.57\% \\
+TFT-BO & 3.1234 & 1.0915 & 51.84\% & 11.3054 & 2.0616 & 56.94\% & 20.3936 & 3.3152 & 56.57\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:backtest_results_mape_r2_qlike
+\begin{table}[H]
+\scriptsize
+\setlength{\tabcolsep}{1.2pt}
+\caption{Model backtest results (MAPE, $R^2$, and QLIKE) across all time horizons (extended results of \autoref{tab:backtest_results}). $R^2$ is the out-of-sample coefficient of determination, $1-\sum_t (V_{t+h}-\widehat{V}_{t+h|t})^2/\sum_t (V_{t+h}-\bar{V})^2$, computed in the same way for all models. Bold values indicate the best model for each horizon and metric.}\label{tab:backtest_results_mape_r2_qlike}
+\begin{tabular*}{\tblwidth}{@{} L R R R R R R R R R @{}}
+\toprule
+& \multicolumn{3}{c}{\textbf{1 day}} & \multicolumn{3}{c}{\textbf{5 days}} & \multicolumn{3}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10}
+\textbf{Model} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} \\
+\midrule
+RW & 5.14\% & 0.8570 & \textbf{0.0029} & 10.60\% & 0.4453 & 0.0119 & 17.89\% & -0.2795 & 0.0266 \\
+HAR & \textbf{5.04\%} & \textbf{0.8630} & \textbf{0.0029} & \textbf{9.98\%} & \textbf{0.5278} & \textbf{0.0108} & \textbf{15.32\%} & \textbf{0.1098} & \textbf{0.0208} \\
+HAR-X & 5.09\% & 0.8607 & \textbf{0.0029} & 10.29\% & 0.5039 & 0.0112 & 17.26\% & -0.0101 & 0.0228 \\
+RF-GS-CV & 5.44\% & 0.8560 & 0.0031 & 12.11\% & 0.4488 & 0.0129 & 26.20\% & -0.7273 & 0.0368 \\
+RF-BO & 5.48\% & 0.8527 & 0.0031 & 12.11\% & 0.4488 & 0.0129 & 27.36\% & -0.8989 & 0.0389 \\
+XGBoost-GS-CV & 5.14\% & 0.8541 & 0.0031 & 13.38\% & 0.2593 & 0.0158 & 34.58\% & -3.5388 & 0.0562 \\
+XGBoost-BO & 5.16\% & 0.8507 & 0.0031 & 10.42\% & 0.4946 & 0.0118 & 35.73\% & -3.6655 & 0.0576 \\
+LSTM-GS-CV & 6.05\% & 0.8261 & 0.0037 & 11.58\% & 0.4625 & 0.0126 & 21.91\% & -0.3383 & 0.0299 \\
+LSTM-BO & 5.94\% & 0.8283 & 0.0036 & 11.36\% & 0.4788 & 0.0122 & 21.15\% & -0.2464 & 0.0284 \\
+TFT-GS-CV & 6.36\% & 0.7651 & 0.0047 & 10.78\% & 0.4303 & 0.0126 & 18.35\% & -0.1993 & 0.0288 \\
+TFT-BO & 5.75\% & 0.8534 & 0.0035 & 10.78\% & 0.4485 & 0.0124 & 18.17\% & -0.0934 & 0.0266 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:mcs
+\begin{table}[!h]
+\scriptsize
+\caption{Model Confidence Set (MCS) $p$-values for the MSE and QLIKE loss functions across forecast horizons ($h \in \{1,5,22\}$ trading days). Bold values indicate inclusion in the MCS at the 5\% significance level.}\label{tab:mcs}
+\setlength{\tabcolsep}{2pt}
+\begin{tabular*}{\tblwidth}{@{} L C C C C C C @{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{1 day}} & \multicolumn{2}{c}{\textbf{5 days}} & \multicolumn{2}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Model} & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ \\
+\midrule
+RW & \textbf{0.0984} & 0.0318 & \textbf{0.1130} & 0.0098 & 0.0000 & 0.0124 \\
+HAR & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} \\
+HAR-X & \textbf{0.0984} & 0.0318 & \textbf{0.1302} & \textbf{0.0700} & 0.0222 & \textbf{0.0524} \\
+RF-GS-CV & \textbf{0.0984} & 0.0104 & \textbf{0.1130} & 0.0002 & 0.0000 & 0.0000 \\
+RF-BO & \textbf{0.0984} & 0.0102 & \textbf{0.1130} & 0.0002 & 0.0000 & 0.0000 \\
+XGBoost-GS-CV & \textbf{0.0984} & 0.0318 & \textbf{0.1130} & 0.0002 & 0.0000 & 0.0000 \\
+XGBoost-BO & \textbf{0.0984} & 0.0170 & \textbf{0.1302} & 0.0436 & 0.0000 & 0.0000 \\
+LSTM-GS-CV & 0.0144 & 0.0000 & \textbf{0.1130} & 0.0098 & 0.0000 & 0.0000 \\
+LSTM-BO & 0.0118 & 0.0000 & \textbf{0.1130} & 0.0098 & 0.0000 & 0.0000 \\
+TFT-GS-CV & \textbf{0.0984} & 0.0000 & \textbf{0.1130} & 0.0098 & 0.0000 & 0.0000 \\
+TFT-BO & \textbf{0.0984} & 0.0000 & \textbf{0.1130} & 0.0002 & 0.0000 & 0.0000 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:mcs_pm
+\begin{table}[!h]
+\scriptsize
+\caption{Model Confidence Set (MCS) $p$-values for base and Polymarket-augmented (PM) specifications across forecast horizons ($h \in \{1,5,22\}$ trading days), using the MSE and QLIKE loss functions. The MCS is computed jointly over the 20 specifications, on the forecast origins common to all of them. Bold values indicate inclusion in the MCS at the 5\% significance level.}\label{tab:mcs_pm}
+\setlength{\tabcolsep}{2pt}
+\begin{tabular*}{\tblwidth}{@{} L C C C C C C @{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{1 day}} & \multicolumn{2}{c}{\textbf{5 days}} & \multicolumn{2}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Model} & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ \\
+\midrule
+HAR & \textbf{0.8178} & \textbf{0.8242} & \textbf{1.0000} & \textbf{1.0000} & \textbf{0.2732} & 0.0004 \\
+HAR (PM) & \textbf{0.2916} & \textbf{0.1138} & \textbf{0.7716} & \textbf{0.8826} & \textbf{0.4988} & \textbf{0.5500} \\
+HAR-X & \textbf{0.0770} & 0.0228 & \textbf{0.6448} & \textbf{0.3996} & 0.0062 & 0.0004 \\
+HAR-X (PM) & \textbf{0.0770} & 0.0228 & \textbf{0.5920} & \textbf{0.8274} & \textbf{1.0000} & \textbf{1.0000} \\
+RF-GS-CV & \textbf{0.9000} & \textbf{1.0000} & \textbf{0.7056} & \textbf{0.8274} & 0.0006 & 0.0002 \\
+RF-GS-CV (PM) & \textbf{1.0000} & \textbf{0.9124} & \textbf{0.7056} & \textbf{0.8274} & 0.0062 & 0.0004 \\
+RF-BO & \textbf{0.8178} & \textbf{0.8242} & \textbf{0.7716} & \textbf{0.8826} & 0.0006 & 0.0002 \\
+RF-BO (PM) & \textbf{0.8178} & \textbf{0.9124} & \textbf{0.7056} & \textbf{0.8274} & 0.0022 & 0.0004 \\
+XGBoost-GS-CV & \textbf{0.2916} & \textbf{0.0790} & \textbf{0.6448} & \textbf{0.4684} & 0.0006 & 0.0002 \\
+XGBoost-GS-CV (PM) & \textbf{0.8178} & \textbf{0.8242} & \textbf{0.0526} & 0.0170 & \textbf{0.2732} & \textbf{0.1370} \\
+XGBoost-BO & \textbf{0.2202} & 0.0438 & \textbf{0.7056} & \textbf{0.8274} & 0.0006 & 0.0002 \\
+XGBoost-BO (PM) & \textbf{0.2916} & \textbf{0.1138} & \textbf{0.1288} & \textbf{0.1040} & 0.0062 & 0.0004 \\
+LSTM-GS-CV & \textbf{0.2202} & \textbf{0.5008} & \textbf{0.0526} & \textbf{0.1040} & 0.0062 & 0.0004 \\
+LSTM-GS-CV (PM) & \textbf{0.2106} & 0.0228 & \textbf{0.0526} & 0.0170 & 0.0062 & 0.0004 \\
+LSTM-BO & \textbf{0.0770} & 0.0228 & \textbf{0.6448} & \textbf{0.3996} & 0.0022 & 0.0002 \\
+LSTM-BO (PM) & \textbf{0.2202} & 0.0228 & \textbf{0.1288} & \textbf{0.1040} & 0.0062 & 0.0004 \\
+TFT-GS-CV & \textbf{0.0770} & 0.0228 & \textbf{0.0526} & 0.0170 & 0.0000 & 0.0002 \\
+TFT-GS-CV (PM) & \textbf{0.2106} & 0.0228 & \textbf{0.0506} & 0.0118 & 0.0000 & 0.0002 \\
+TFT-BO & \textbf{0.0770} & 0.0228 & \textbf{0.0526} & 0.0170 & 0.0006 & 0.0002 \\
+TFT-BO (PM) & \textbf{0.2202} & \textbf{0.0790} & \textbf{0.0526} & 0.0170 & 0.0006 & 0.0002 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:dm_test
+\begin{table}[!h]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{1.5pt}
+\caption{Diebold--Mariano (DM) test results comparing base and Polymarket-augmented specifications across forecast horizons ($h \in \{1,5,22\}$ trading days). The table reports the percentage changes (in \%) in MSE and QLIKE defined in \eqref{eq:delta_loss} and the DM $p$-values under the MSE and QLIKE loss functions. Bold $p$-values indicate nominal significance at the 5\% level. The $p$-values are not adjusted for multiple comparisons.}
+\label{tab:dm_test}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}} l cccc cccc cccc @{}}
+\toprule
+& \multicolumn{4}{c}{\textbf{1 day}} & \multicolumn{4}{c}{\textbf{5 days}} & \multicolumn{4}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+\textbf{Model} & $\Delta\text{MSE}$ & $\Delta\text{QLIKE}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $\Delta\text{MSE}$ & $\Delta\text{QLIKE}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ & $\Delta\text{MSE}$ & $\Delta\text{QLIKE}$ & $p_{\text{MSE}}$ & $p_{\text{QLIKE}}$ \\
+\midrule
+HAR & 10.31 & 10.82 & 0.2378 & 0.0907 & 9.94 & 12.01 & 0.7365 & 0.6651 & -52.65 & -60.30 & 0.2654 & 0.2043 \\
+HAR-X & 16.17 & 12.35 & 0.0895 & 0.0681 & 14.60 & 1.75 & 0.5221 & 0.9155 & -56.10 & -57.43 & 0.0833 & \textbf{0.0490} \\
+RF-GS-CV & -0.17 & 1.86 & 0.9772 & 0.7148 & -4.10 & -3.85 & 0.5089 & 0.5406 & -16.11 & -18.60 & 0.2553 & 0.2662 \\
+RF-BO & 0.60 & -0.90 & 0.8601 & 0.7520 & 2.97 & 5.18 & 0.5016 & 0.2860 & -3.83 & -6.08 & 0.7100 & 0.6097 \\
+XGBoost-GS-CV & -6.56 & -11.75 & 0.4952 & 0.1913 & 37.43 & 32.50 & 0.0814 & 0.0632 & -8.31 & -9.23 & 0.1227 & 0.1027 \\
+XGBoost-BO & -5.45 & -8.13 & 0.5241 & 0.3593 & 14.91 & 13.32 & 0.2641 & 0.2727 & -7.74 & -8.10 & 0.2567 & 0.2347 \\
+LSTM-GS-CV & 1.69 & 10.59 & 0.8726 & 0.3572 & -4.12 & 3.39 & 0.6562 & 0.7297 & -8.28 & -11.16 & 0.4648 & 0.3666 \\
+LSTM-BO & -12.70 & -2.35 & 0.6089 & 0.9092 & 11.94 & 15.45 & 0.1449 & 0.1471 & -10.39 & -13.79 & 0.2088 & 0.1501 \\
+TFT-GS-CV & -12.94 & -13.22 & 0.2579 & 0.2130 & 9.88 & 11.48 & 0.2837 & 0.2194 & -0.17 & 7.13 & 0.9914 & 0.6341 \\
+TFT-BO & -7.04 & -13.42 & 0.4691 & 0.1780 & 7.21 & 12.28 & 0.4073 & 0.2005 & 3.07 & 9.08 & 0.8122 & 0.5285 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:dm_adjusted
+\begin{table}[H]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\caption{Adjusted Diebold--Mariano test $p$-values using the
+Holm and Benjamini--Hochberg (BH) procedures across all 60 tests.
+Bold values indicate statistical significance at the 5\% level
+after the corresponding correction (extended results of \autoref{tab:dm_test}).}
+\label{tab:dm_adjusted}
+\begin{tabular*}{\linewidth}{@{\extracolsep{\fill}} l cccc cccc cccc @{}}
+\toprule
+& \multicolumn{4}{c}{\textbf{1 day}}
+& \multicolumn{4}{c}{\textbf{5 days}}
+& \multicolumn{4}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-5} \cmidrule(lr){6-9} \cmidrule(lr){10-13}
+\textbf{Model}
+& $p_{\text{MSE}}^{H}$ & $p_{\text{MSE}}^{BH}$
+& $p_{\text{QLIKE}}^{H}$ & $p_{\text{QLIKE}}^{BH}$
+& $p_{\text{MSE}}^{H}$ & $p_{\text{MSE}}^{BH}$
+& $p_{\text{QLIKE}}^{H}$ & $p_{\text{QLIKE}}^{BH}$
+& $p_{\text{MSE}}^{H}$ & $p_{\text{MSE}}^{BH}$
+& $p_{\text{QLIKE}}^{H}$ & $p_{\text{QLIKE}}^{BH}$ \\
+\midrule
+HAR
+& 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.8498 & 1.0000 & 0.8314 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+HAR-X
+& 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.7544 & 1.0000 & 0.9470 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+RF-GS-CV
+& 1.0000 & 0.9914 & 1.0000 & 0.8498 & 1.0000 & 0.7544 & 1.0000 & 0.7544 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+RF-BO
+& 1.0000 & 0.9349 & 1.0000 & 0.8513 & 1.0000 & 0.7544 & 1.0000 & 0.5721 & 1.0000 & 0.8498 & 1.0000 & 0.8129 \\
+
+XGBoost-GS-CV
+& 1.0000 & 0.7544 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+XGBoost-BO
+& 1.0000 & 0.7544 & 1.0000 & 0.6665 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+LSTM-GS-CV
+& 1.0000 & 0.9349 & 1.0000 & 0.6665 & 1.0000 & 0.8314 & 1.0000 & 0.8498 & 1.0000 & 0.7544 & 1.0000 & 0.6665 \\
+
+LSTM-BO
+& 1.0000 & 0.8129 & 1.0000 & 0.9470 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 \\
+
+TFT-GS-CV
+& 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.5721 & 1.0000 & 0.9914 & 1.0000 & 0.8270 \\
+
+TFT-BO
+& 1.0000 & 0.7544 & 1.0000 & 0.5721 & 1.0000 & 0.7187 & 1.0000 & 0.5721 & 1.0000 & 0.9024 & 1.0000 & 0.7544 \\
+\bottomrule
+\end{tabular*}
+\begin{flushleft}
+\footnotesize
+Notes: $H$ denotes the Holm correction and $BH$ denotes the
+Benjamini--Hochberg correction. Both procedures are applied jointly
+to the 60 unadjusted DM $p$-values. Values below 0.05 are statistically
+significant after the corresponding correction.
+\end{flushleft}
+\end{table}
+
+%%% LABEL tab:backtest_results_mse_qlike
+\begin{table}[H]
+\scriptsize
+\caption{Out-of-sample MSE and QLIKE by model and forecast horizon
+($h\in\{1,5,22\}$ trading days), for specifications with and without
+Polymarket (PM) features. For each model, both specifications are evaluated on the forecast origins
+common to the two (extended results of \autoref{tab:dm_test}).}\label{tab:backtest_results_mse_qlike}
+\setlength{\tabcolsep}{2pt}
+\begin{tabular*}{\tblwidth}{@{} L C C C C C C @{}}
+\toprule
+& \multicolumn{2}{c}{\textbf{1 day}} & \multicolumn{2}{c}{\textbf{5 days}} & \multicolumn{2}{c}{\textbf{22 days}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Model} & \textbf{MSE} & \textbf{QLIKE} & \textbf{MSE} & \textbf{QLIKE} & \textbf{MSE} & \textbf{QLIKE} \\
+\midrule
+HAR (PM) & 4.8145 & 0.0052 & 10.6697 & 0.0127 & 9.0556 & 0.0096 \\
+HAR & 4.3644 & 0.0047 & 9.7048 & 0.0114 & 19.1239 & 0.0242 \\
+HAR-X (PM) & 5.8585 & 0.0063 & 13.5636 & 0.0144 & 7.6559 & 0.0084 \\
+HAR-X & 5.0428 & 0.0056 & 11.8360 & 0.0141 & 17.4411 & 0.0197 \\
+RF-GS-CV (PM) & 3.7741 & 0.0043 & 10.1167 & 0.0118 & 14.9188 & 0.0179 \\
+RF-GS-CV & 3.7805 & 0.0042 & 10.5492 & 0.0123 & 17.7841 & 0.0219 \\
+RF-BO (PM) & 3.8552 & 0.0043 & 10.1146 & 0.0118 & 17.5247 & 0.0211 \\
+RF-BO & 3.8322 & 0.0043 & 9.8231 & 0.0112 & 18.2226 & 0.0225 \\
+XGBoost-GS-CV (PM) & 4.2519 & 0.0046 & 14.8477 & 0.0167 & 15.5663 & 0.0193 \\
+XGBoost-GS-CV & 4.5503 & 0.0052 & 10.8038 & 0.0126 & 16.9763 & 0.0212 \\
+XGBoost-BO (PM) & 4.5135 & 0.0050 & 11.9411 & 0.0140 & 16.7685 & 0.0211 \\
+XGBoost-BO & 4.7736 & 0.0054 & 10.3913 & 0.0123 & 18.1743 & 0.0230 \\
+LSTM-GS-CV (PM) & 5.1993 & 0.0058 & 16.1708 & 0.0188 & 17.5944 & 0.0228 \\
+LSTM-GS-CV & 5.1130 & 0.0052 & 16.8651 & 0.0182 & 19.1823 & 0.0256 \\
+LSTM-BO (PM) & 5.1076 & 0.0060 & 15.2942 & 0.0198 & 18.5504 & 0.0246 \\
+LSTM-BO & 5.8505 & 0.0061 & 13.6628 & 0.0171 & 20.7019 & 0.0285 \\
+TFT-GS-CV (PM) & 5.1062 & 0.0060 & 14.7441 & 0.0178 & 31.8037 & 0.0439 \\
+TFT-GS-CV & 5.8650 & 0.0069 & 13.4187 & 0.0160 & 31.8574 & 0.0410 \\
+TFT-BO (PM) & 4.9738 & 0.0057 & 14.8977 & 0.0184 & 28.8629 & 0.0402 \\
+TFT-BO & 5.3505 & 0.0066 & 13.8958 & 0.0164 & 28.0025 & 0.0369 \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h1_regimi
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 1-day horizon. Bold values indicate the best result for each metric within each regime. Directional accuracy is not reported for the RW, since its forecast implies no change in the VIX (extended results of \autoref{fig:heatmap_vol_regimes}).}
+\label{tab:models_h1_regimi}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{3}{*}{RW}
+& Low ($<20$) & 702 & 1.308 & \textbf{0.751} & \textbf{4.44\%} & 0.765 & \textbf{0.0022} & N/A \\
+& Medium (20--30) & 200 & 4.999 & 1.558 & 6.84\% & 0.489 & 0.0044 & N/A \\
+& High ($>30$) & 24 & 37.690 & 3.859 & 11.29\% & 0.062 & 0.0131 & N/A \\
+\midrule
+\multirow{3}{*}{HAR}
+& Low ($<20$) & 702 & \textbf{1.304} & 0.753 & 4.46\% & \textbf{0.766} & \textbf{0.0022} & 51.85\% \\
+& Medium (20--30) & 200 & \textbf{4.809} & \textbf{1.466} & 6.38\% & \textbf{0.508} & \textbf{0.0042} & \textbf{63.50\%} \\
+& High ($>30$) & 24 & 34.428 & 3.798 & 10.77\% & 0.143 & 0.0126 & 62.50\% \\
+\midrule
+\multirow{3}{*}{HAR-X}
+& Low ($<20$) & 702 & 1.310 & 0.758 & 4.49\% & 0.765 & \textbf{0.0022} & 51.28\% \\
+& Medium (20--30) & 200 & 4.912 & 1.483 & 6.47\% & 0.498 & 0.0043 & 59.50\% \\
+& High ($>30$) & 24 & 35.335 & 3.808 & 10.84\% & 0.121 & 0.0130 & \textbf{66.67\%} \\
+\midrule
+\multirow{3}{*}{RF-GS-CV}
+& Low ($<20$) & 702 & 1.434 & 0.824 & 4.94\% & 0.742 & 0.0024 & 48.29\% \\
+& Medium (20--30) & 200 & 5.166 & 1.528 & 6.62\% & 0.472 & 0.0045 & 56.00\% \\
+& High ($>30$) & 24 & 33.394 & 3.817 & 10.38\% & 0.169 & 0.0127 & 58.33\% \\
+\midrule
+\multirow{3}{*}{RF-BO}
+& Low ($<20$) & 702 & 1.440 & 0.828 & 4.96\% & 0.741 & 0.0024 & 48.43\% \\
+& Medium (20--30) & 200 & 5.334 & 1.549 & 6.71\% & 0.455 & 0.0046 & 57.00\% \\
+& High ($>30$) & 24 & 34.539 & 3.838 & 10.43\% & 0.140 & 0.0130 & 62.50\% \\
+\midrule
+\multirow{3}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 702 & 1.388 & 0.775 & 4.59\% & 0.751 & 0.0023 & 51.14\% \\
+& Medium (20--30) & 200 & 5.000 & 1.479 & \textbf{6.31\%} & 0.489 & 0.0044 & 61.00\% \\
+& High ($>30$) & 24 & 37.674 & 4.138 & 11.52\% & 0.062 & 0.0139 & 58.33\% \\
+\midrule
+\multirow{3}{*}{XGBoost-BO}
+& Low ($<20$) & 702 & 1.396 & 0.777 & 4.61\% & 0.749 & 0.0023 & 51.00\% \\
+& Medium (20--30) & 200 & 5.025 & 1.484 & 6.33\% & 0.486 & 0.0044 & 58.50\% \\
+& High ($>30$) & 24 & 40.080 & 4.208 & 11.76\% & 0.003 & 0.0143 & 62.50\% \\
+\midrule
+\multirow{3}{*}{LSTM-GS-CV}
+& Low ($<20$) & 702 & 1.640 & 0.893 & 5.37\% & 0.705 & 0.0027 & 51.00\% \\
+& Medium (20--30) & 200 & 6.730 & 1.783 & 7.72\% & 0.312 & 0.0061 & 50.00\% \\
+& High ($>30$) & 24 & 38.953 & 3.960 & 11.76\% & 0.031 & 0.0128 & 58.33\% \\
+\midrule
+\multirow{3}{*}{LSTM-BO}
+& Low ($<20$) & 702 & 1.567 & 0.883 & 5.34\% & 0.719 & 0.0027 & \textbf{52.42\%} \\
+& Medium (20--30) & 200 & 6.076 & 1.674 & 7.24\% & 0.379 & 0.0054 & 58.00\% \\
+& High ($>30$) & 24 & 44.748 & 4.369 & 12.65\% & -0.114 & 0.0161 & 41.67\% \\
+\midrule
+\multirow{3}{*}{TFT-GS-CV}
+& Low ($<20$) & 702 & 1.739 & 0.966 & 5.92\% & 0.688 & 0.0031 & 50.14\% \\
+& Medium (20--30) & 200 & 5.164 & 1.583 & 6.90\% & 0.472 & 0.0045 & 60.50\% \\
+& High ($>30$) & 24 & 99.236 & 5.663 & 14.91\% & -1.470 & 0.0514 & 62.50\% \\
+\midrule
+\multirow{3}{*}{TFT-BO}
+& Low ($<20$) & 702 & 1.695 & 0.899 & 5.41\% & 0.696 & 0.0030 & 48.58\% \\
+& Medium (20--30) & 200 & 5.139 & 1.487 & 6.41\% & 0.475 & 0.0045 & 63.00\% \\
+& High ($>30$) & 24 & \textbf{28.109} & \textbf{3.434} & \textbf{9.97\%} & \textbf{0.300} & \textbf{0.0115} & 54.17\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h5_regimi
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 5-day horizon. Bold values indicate the best result for each metric within each regime. Directional accuracy is not reported for the RW, since its forecast implies no change in the VIX (extended results of \autoref{fig:heatmap_vol_regimes}).}
+\label{tab:models_h5_regimi}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{3}{*}{RW}
+& Low ($<20$) & 698 & 5.782 & 1.574 & 8.87\% & 0.379 & 0.0090 & N/A \\
+& Medium (20--30) & 200 & 23.948 & 3.196 & 15.32\% & -0.024 & 0.0202 & N/A \\
+& High ($>30$) & 24 & 69.087 & 6.015 & 21.38\% & -2.962 & 0.0266 & N/A \\
+\midrule
+\multirow{3}{*}{HAR}
+& Low ($<20$) & 698 & \textbf{5.580} & \textbf{1.559} & \textbf{8.85\%} & \textbf{0.401} & \textbf{0.0085} & 56.88\% \\
+& Medium (20--30) & 200 & \textbf{21.712} & \textbf{2.894} & 13.59\% & \textbf{0.071} & \textbf{0.0185} & \textbf{71.50\%} \\
+& High ($>30$) & 24 & 28.629 & 3.578 & 12.65\% & -0.642 & \textbf{0.0144} & \textbf{87.50\%} \\
+\midrule
+\multirow{3}{*}{HAR-X}
+& Low ($<20$) & 698 & 5.674 & 1.588 & 9.04\% & 0.391 & 0.0086 & \textbf{58.60\%} \\
+& Medium (20--30) & 200 & 22.527 & 3.011 & 14.13\% & 0.036 & 0.0193 & 64.50\% \\
+& High ($>30$) & 24 & 37.965 & 4.227 & 14.86\% & -1.177 & 0.0177 & \textbf{87.50\%} \\
+\midrule
+\multirow{3}{*}{RF-GS-CV}
+& Low ($<20$) & 698 & 6.626 & 1.893 & 11.33\% & 0.288 & 0.0104 & 52.15\% \\
+& Medium (20--30) & 200 & 23.925 & 3.131 & 14.52\% & -0.023 & 0.0208 & 53.50\% \\
+& High ($>30$) & 24 & 42.032 & 4.309 & 14.54\% & -1.410 & 0.0179 & 70.83\% \\
+\midrule
+\multirow{3}{*}{RF-BO}
+& Low ($<20$) & 698 & 6.626 & 1.893 & 11.33\% & 0.288 & 0.0104 & 52.15\% \\
+& Medium (20--30) & 200 & 23.925 & 3.131 & 14.52\% & -0.023 & 0.0208 & 53.50\% \\
+& High ($>30$) & 24 & 42.032 & 4.309 & 14.54\% & -1.410 & 0.0179 & 70.83\% \\
+\midrule
+\multirow{3}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 698 & 8.030 & 2.083 & 12.51\% & 0.138 & 0.0128 & 51.43\% \\
+& Medium (20--30) & 200 & 26.853 & 3.266 & 15.04\% & -0.149 & 0.0240 & 59.00\% \\
+& High ($>30$) & 24 & 125.963 & 7.471 & 24.67\% & -6.224 & 0.0356 & 54.17\% \\
+\midrule
+\multirow{3}{*}{XGBoost-BO}
+& Low ($<20$) & 698 & 6.216 & 1.689 & 9.56\% & 0.332 & 0.0097 & 52.72\% \\
+& Medium (20--30) & 200 & 21.906 & 2.908 & \textbf{13.21\%} & 0.063 & \textbf{0.0185} & 69.00\% \\
+& High ($>30$) & 24 & 34.703 & 3.737 & 12.44\% & -0.990 & \textbf{0.0144} & 79.17\% \\
+\midrule
+\multirow{3}{*}{LSTM-GS-CV}
+& Low ($<20$) & 698 & 6.164 & 1.757 & 10.24\% & 0.338 & 0.0095 & 54.44\% \\
+& Medium (20--30) & 200 & 26.278 & 3.523 & 16.44\% & -0.124 & 0.0229 & 50.50\% \\
+& High ($>30$) & 24 & \textbf{25.077} & \textbf{3.165} & \textbf{10.00\%} & \textbf{-0.438} & 0.0153 & \textbf{87.50\%} \\
+\midrule
+\multirow{3}{*}{LSTM-BO}
+& Low ($<20$) & 698 & 6.114 & 1.747 & 10.24\% & 0.343 & 0.0095 & 52.15\% \\
+& Medium (20--30) & 200 & 24.306 & 3.242 & 15.00\% & -0.040 & 0.0210 & 58.00\% \\
+& High ($>30$) & 24 & 30.100 & 4.106 & 13.90\% & -0.726 & 0.0191 & 70.83\% \\
+\midrule
+\multirow{3}{*}{TFT-GS-CV}
+& Low ($<20$) & 698 & 6.299 & 1.693 & 9.64\% & 0.323 & 0.0099 & 52.87\% \\
+& Medium (20--30) & 200 & 23.926 & 3.040 & 14.02\% & -0.023 & 0.0210 & 66.00\% \\
+& High ($>30$) & 24 & 66.055 & 5.113 & 16.92\% & -2.788 & 0.0235 & 79.17\% \\
+\midrule
+\multirow{3}{*}{TFT-BO}
+& Low ($<20$) & 698 & 6.347 & 1.696 & 9.63\% & 0.318 & 0.0101 & 53.44\% \\
+& Medium (20--30) & 200 & 23.070 & 3.026 & 14.17\% & 0.013 & 0.0198 & 66.00\% \\
+& High ($>30$) & 24 & 57.483 & 4.653 & 15.97\% & -2.297 & 0.0198 & 83.33\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h22_regimi
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 22-day horizon. Bold values indicate the best result for each metric within each regime. Directional accuracy is not reported for the RW, since its forecast implies no change in the VIX (extended results of \autoref{fig:heatmap_vol_regimes}).}
+\label{tab:models_h22_regimi}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{3}{*}{RW}
+& Low ($<20$) & 683 & 12.547 & 2.495 & 13.92\% & 0.005 & 0.0208 & N/A \\
+& Medium (20--30) & 198 & 39.820 & 4.973 & 26.02\% & -0.337 & 0.0370 & N/A \\
+& High ($>30$) & 24 & 214.302 & 13.083 & 63.76\% & -25.751 & 0.1086 & N/A \\
+\midrule
+\multirow{3}{*}{HAR}
+& Low ($<20$) & 683 & \textbf{11.162} & \textbf{2.400} & \textbf{13.64\%} & \textbf{0.115} & \textbf{0.0174} & 61.64\% \\
+& Medium (20--30) & 198 & \textbf{32.990} & \textbf{4.014} & \textbf{19.81\%} & \textbf{-0.107} & \textbf{0.0315} & \textbf{77.78\%} \\
+& High ($>30$) & 24 & 36.260 & 5.233 & 26.37\% & -3.526 & 0.0307 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{HAR-X}
+& Low ($<20$) & 683 & 11.827 & 2.569 & 14.99\% & 0.062 & 0.0181 & \textbf{62.08\%} \\
+& Medium (20--30) & 198 & 38.032 & 4.562 & 23.10\% & -0.277 & 0.0364 & 63.13\% \\
+& High ($>30$) & 24 & 60.064 & 6.602 & 33.42\% & -6.498 & 0.0452 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-GS-CV}
+& Low ($<20$) & 683 & 24.785 & 3.968 & 24.67\% & -0.966 & 0.0327 & 59.15\% \\
+& Medium (20--30) & 198 & 55.113 & 6.104 & 30.93\% & -0.850 & 0.0504 & 40.40\% \\
+& High ($>30$) & 24 & 54.847 & 5.976 & 30.64\% & -5.846 & 0.0419 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-BO}
+& Low ($<20$) & 683 & 26.873 & 4.115 & 25.53\% & -1.131 & 0.0343 & 59.30\% \\
+& Medium (20--30) & 198 & 60.884 & 6.477 & 32.86\% & -1.044 & 0.0535 & 38.89\% \\
+& High ($>30$) & 24 & 68.460 & 6.639 & 33.98\% & -7.546 & 0.0490 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 683 & 41.440 & 4.552 & 28.23\% & -2.287 & 0.0417 & 61.49\% \\
+& Medium (20--30) & 198 & 218.187 & 10.383 & 53.61\% & -6.324 & 0.1004 & 40.91\% \\
+& High ($>30$) & 24 & 212.885 & 11.477 & 58.30\% & -25.574 & 0.1044 & 75.00\% \\
+\midrule
+\multirow{3}{*}{XGBoost-BO}
+& Low ($<20$) & 683 & 43.915 & 4.747 & 29.41\% & -2.483 & 0.0434 & 60.76\% \\
+& Medium (20--30) & 198 & 216.079 & 10.425 & 54.29\% & -6.254 & 0.0996 & 40.40\% \\
+& High ($>30$) & 24 & 248.895 & 12.373 & 62.41\% & -30.069 & 0.1132 & 66.67\% \\
+\midrule
+\multirow{3}{*}{LSTM-GS-CV}
+& Low ($<20$) & 683 & 16.453 & 3.167 & 19.22\% & -0.305 & 0.0238 & 60.32\% \\
+& Medium (20--30) & 198 & 53.347 & 6.055 & 30.75\% & -0.791 & 0.0512 & 38.38\% \\
+& High ($>30$) & 24 & 32.901 & 5.055 & 25.46\% & -3.107 & 0.0307 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{LSTM-BO}
+& Low ($<20$) & 683 & 15.559 & 3.104 & 18.95\% & -0.234 & 0.0230 & 58.86\% \\
+& Medium (20--30) & 198 & 48.781 & 5.549 & 28.29\% & -0.638 & 0.0470 & 44.95\% \\
+& High ($>30$) & 24 & \textbf{31.435} & 4.940 & 24.75\% & \textbf{-2.924} & 0.0283 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-GS-CV}
+& Low ($<20$) & 683 & 14.831 & 2.837 & 16.11\% & -0.176 & 0.0234 & 56.08\% \\
+& Medium (20--30) & 198 & 45.732 & 5.150 & 25.21\% & -0.535 & 0.0466 & 53.03\% \\
+& High ($>30$) & 24 & 44.186 & 4.972 & 25.43\% & -4.516 & 0.0326 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-BO}
+& Low ($<20$) & 683 & 14.671 & 2.836 & 16.31\% & -0.164 & 0.0233 & 54.61\% \\
+& Medium (20--30) & 198 & 38.324 & 4.789 & 23.87\% & -0.287 & 0.0377 & 58.08\% \\
+& High ($>30$) & 24 & 35.327 & \textbf{4.783} & \textbf{24.09\%} & -3.410 & \textbf{0.0278} & \textbf{100.00\%} \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h1_regimi_pm
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 1-day horizon, for models with and without Polymarket (PM) features, on the forecast origins common to all specifications. Bold values indicate the best result for each metric within each regime. The high volatility regime contains no forecast origin at this horizon. Extended results of \autoref{fig:heatmap_vol_regimes_pm}.}
+\label{tab:models_h1_regimi_pm}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{2}{*}{HAR}
+& Low ($<20$) & 64 & \textbf{2.031} & \textbf{0.975} & \textbf{5.23\%} & \textbf{0.299} & \textbf{0.0031} & 53.12\% \\
+& Medium (20--30) & 29 & 9.513 & 2.222 & 9.64\% & 0.276 & 0.0080 & 65.52\% \\
+\midrule
+\multirow{2}{*}{HAR (PM)}
+& Low ($<20$) & 64 & 2.621 & 1.219 & 6.59\% & 0.095 & 0.0041 & 37.50\% \\
+& Medium (20--30) & 29 & 9.655 & 2.222 & 9.69\% & 0.265 & 0.0076 & 58.62\% \\
+\midrule
+\multirow{2}{*}{HAR-X}
+& Low ($<20$) & 64 & 2.963 & 1.334 & 7.28\% & -0.023 & 0.0046 & 31.25\% \\
+& Medium (20--30) & 29 & 9.633 & 2.372 & 10.30\% & 0.267 & 0.0079 & 51.72\% \\
+\midrule
+\multirow{2}{*}{HAR-X (PM)}
+& Low ($<20$) & 64 & 3.678 & 1.482 & 8.04\% & -0.269 & 0.0055 & 31.25\% \\
+& Medium (20--30) & 29 & 10.670 & 2.495 & 10.72\% & 0.188 & 0.0081 & 58.62\% \\
+\midrule
+\multirow{2}{*}{RF-GS-CV}
+& Low ($<20$) & 64 & 2.236 & 1.116 & 6.08\% & 0.228 & 0.0034 & 54.69\% \\
+& Medium (20--30) & 29 & 7.998 & 2.032 & 8.72\% & 0.391 & \textbf{0.0069} & 68.97\% \\
+\midrule
+\multirow{2}{*}{RF-GS-CV (PM)}
+& Low ($<20$) & 64 & 2.281 & 1.107 & 6.01\% & 0.213 & 0.0034 & 53.12\% \\
+& Medium (20--30) & 29 & \textbf{7.838} & \textbf{1.997} & \textbf{8.46\%} & \textbf{0.404} & \textbf{0.0069} & 72.41\% \\
+\midrule
+\multirow{2}{*}{RF-BO}
+& Low ($<20$) & 64 & 2.292 & 1.114 & 6.06\% & 0.209 & 0.0034 & 51.56\% \\
+& Medium (20--30) & 29 & 8.041 & 2.023 & 8.64\% & 0.388 & 0.0070 & 72.41\% \\
+\midrule
+\multirow{2}{*}{RF-BO (PM)}
+& Low ($<20$) & 64 & 2.120 & 1.029 & 5.57\% & 0.268 & 0.0032 & 54.69\% \\
+& Medium (20--30) & 29 & 8.498 & 2.117 & 9.07\% & 0.353 & 0.0074 & \textbf{75.86\%} \\
+\midrule
+\multirow{2}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 64 & 2.969 & 1.270 & 6.98\% & -0.025 & 0.0045 & 43.75\% \\
+& Medium (20--30) & 29 & 9.010 & 2.284 & 9.86\% & 0.315 & 0.0078 & 58.62\% \\
+\midrule
+\multirow{2}{*}{XGBoost-GS-CV (PM)}
+& Low ($<20$) & 64 & 2.632 & 1.174 & 6.37\% & 0.092 & 0.0038 & 53.12\% \\
+& Medium (20--30) & 29 & 8.668 & 2.075 & 8.93\% & 0.341 & 0.0071 & 72.41\% \\
+\midrule
+\multirow{2}{*}{XGBoost-BO}
+& Low ($<20$) & 64 & 3.061 & 1.275 & 6.98\% & -0.056 & 0.0047 & 46.88\% \\
+& Medium (20--30) & 29 & 9.590 & 2.286 & 9.86\% & 0.270 & 0.0082 & 62.07\% \\
+\midrule
+\multirow{2}{*}{XGBoost-BO (PM)}
+& Low ($<20$) & 64 & 2.500 & 1.118 & 6.05\% & 0.137 & 0.0038 & 57.81\% \\
+& Medium (20--30) & 29 & 9.466 & 2.247 & 9.65\% & 0.280 & 0.0078 & 62.07\% \\
+\midrule
+\multirow{2}{*}{LSTM-GS-CV}
+& Low ($<20$) & 64 & 3.175 & 1.184 & 6.41\% & -0.096 & 0.0042 & \textbf{59.38\%} \\
+& Medium (20--30) & 29 & 10.494 & 2.453 & 10.57\% & 0.202 & 0.0085 & 51.72\% \\
+\midrule
+\multirow{2}{*}{LSTM-GS-CV (PM)}
+& Low ($<20$) & 64 & 3.786 & 1.272 & 6.82\% & -0.307 & 0.0050 & 54.69\% \\
+& Medium (20--30) & 29 & 9.335 & 2.480 & 10.88\% & 0.290 & 0.0085 & 55.17\% \\
+\midrule
+\multirow{2}{*}{LSTM-BO}
+& Low ($<20$) & 64 & 3.712 & 1.257 & 6.87\% & -0.281 & 0.0047 & 43.75\% \\
+& Medium (20--30) & 29 & 11.601 & 2.699 & 11.79\% & 0.117 & 0.0100 & 41.38\% \\
+\midrule
+\multirow{2}{*}{LSTM-BO (PM)}
+& Low ($<20$) & 64 & 3.155 & 1.410 & 7.73\% & -0.089 & 0.0047 & 45.31\% \\
+& Medium (20--30) & 29 & 10.437 & 2.301 & 9.27\% & 0.206 & 0.0098 & 62.07\% \\
+\midrule
+\multirow{2}{*}{TFT-GS-CV}
+& Low ($<20$) & 64 & 4.812 & 1.548 & 8.39\% & -0.661 & 0.0066 & 56.25\% \\
+& Medium (20--30) & 29 & 9.362 & 2.335 & 9.96\% & 0.288 & 0.0089 & 68.97\% \\
+\midrule
+\multirow{2}{*}{TFT-GS-CV (PM)}
+& Low ($<20$) & 64 & 3.515 & 1.274 & 6.81\% & -0.213 & 0.0052 & 51.56\% \\
+& Medium (20--30) & 29 & 9.746 & 2.410 & 10.51\% & 0.258 & 0.0091 & 55.17\% \\
+\midrule
+\multirow{2}{*}{TFT-BO}
+& Low ($<20$) & 64 & 3.772 & 1.417 & 7.65\% & -0.302 & 0.0059 & 45.31\% \\
+& Medium (20--30) & 29 & 9.747 & 2.313 & 9.59\% & 0.258 & 0.0090 & 68.97\% \\
+\midrule
+\multirow{2}{*}{TFT-BO (PM)}
+& Low ($<20$) & 64 & 3.334 & 1.229 & 6.60\% & -0.151 & 0.0048 & 45.31\% \\
+& Medium (20--30) & 29 & 9.695 & 2.338 & 9.76\% & 0.262 & 0.0089 & 58.62\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h5_regimi_pm
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 5-day horizon, for models with and without Polymarket (PM) features, on the forecast origins common to all specifications. Bold values indicate the best result for each metric within each regime. The high volatility regime contains no forecast origin at this horizon. Extended results of \autoref{fig:heatmap_vol_regimes_pm}.}
+\label{tab:models_h5_regimi_pm}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{2}{*}{HAR}
+& Low ($<20$) & 64 & 7.917 & 1.991 & \textbf{10.18\%} & -0.407 & 0.0103 & 54.69\% \\
+& Medium (20--30) & 25 & 14.281 & 3.070 & 12.57\% & -0.067 & 0.0140 & 48.00\% \\
+\midrule
+\multirow{2}{*}{HAR (PM)}
+& Low ($<20$) & 64 & 12.331 & 2.847 & 15.39\% & -1.191 & 0.0155 & 54.69\% \\
+& Medium (20--30) & 25 & \textbf{6.416} & \textbf{1.898} & \textbf{8.37\%} & \textbf{0.521} & \textbf{0.0057} & \textbf{68.00\%} \\
+\midrule
+\multirow{2}{*}{HAR-X}
+& Low ($<20$) & 64 & 12.103 & 2.790 & 14.70\% & -1.151 & 0.0159 & 43.75\% \\
+& Medium (20--30) & 25 & 11.151 & 2.725 & 11.52\% & 0.167 & 0.0096 & 56.00\% \\
+\midrule
+\multirow{2}{*}{HAR-X (PM)}
+& Low ($<20$) & 64 & 14.783 & 2.888 & 15.37\% & -1.627 & 0.0170 & 57.81\% \\
+& Medium (20--30) & 25 & 10.442 & 2.044 & 9.22\% & 0.220 & 0.0076 & \textbf{68.00\%} \\
+\midrule
+\multirow{2}{*}{RF-GS-CV}
+& Low ($<20$) & 64 & 11.403 & 2.559 & 13.56\% & -1.026 & 0.0136 & \textbf{65.62\%} \\
+& Medium (20--30) & 25 & 11.904 & 2.568 & 10.85\% & 0.111 & 0.0125 & 56.00\% \\
+\midrule
+\multirow{2}{*}{RF-GS-CV (PM)}
+& Low ($<20$) & 64 & 10.424 & 2.512 & 13.26\% & -0.852 & 0.0127 & 57.81\% \\
+& Medium (20--30) & 25 & 12.576 & 2.880 & 12.01\% & 0.060 & 0.0127 & 48.00\% \\
+\midrule
+\multirow{2}{*}{RF-BO}
+& Low ($<20$) & 64 & 10.103 & 2.424 & 12.87\% & -0.795 & 0.0121 & 64.06\% \\
+& Medium (20--30) & 25 & 12.377 & 2.776 & 11.71\% & 0.075 & 0.0123 & 44.00\% \\
+\midrule
+\multirow{2}{*}{RF-BO (PM)}
+& Low ($<20$) & 64 & 10.428 & 2.513 & 13.26\% & -0.853 & 0.0127 & 57.81\% \\
+& Medium (20--30) & 25 & 12.557 & 2.876 & 11.99\% & 0.062 & 0.0127 & 48.00\% \\
+\midrule
+\multirow{2}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 64 & 10.638 & 2.555 & 13.65\% & -0.890 & 0.0130 & 64.06\% \\
+& Medium (20--30) & 25 & 14.328 & 2.959 & 12.28\% & -0.071 & 0.0145 & 52.00\% \\
+\midrule
+\multirow{2}{*}{XGBoost-GS-CV (PM)}
+& Low ($<20$) & 64 & 16.838 & 3.254 & 17.43\% & -1.992 & 0.0193 & 48.44\% \\
+& Medium (20--30) & 25 & 15.457 & 3.145 & 13.10\% & -0.155 & 0.0163 & 56.00\% \\
+\midrule
+\multirow{2}{*}{XGBoost-BO}
+& Low ($<20$) & 64 & 9.576 & 2.482 & 13.29\% & -0.702 & 0.0120 & 62.50\% \\
+& Medium (20--30) & 25 & 15.065 & 3.067 & 12.56\% & -0.126 & 0.0153 & 48.00\% \\
+\midrule
+\multirow{2}{*}{XGBoost-BO (PM)}
+& Low ($<20$) & 64 & 13.093 & 2.769 & 14.62\% & -1.327 & 0.0158 & 56.25\% \\
+& Medium (20--30) & 25 & 13.052 & 3.024 & 12.76\% & 0.025 & 0.0134 & 44.00\% \\
+\midrule
+\multirow{2}{*}{LSTM-GS-CV}
+& Low ($<20$) & 64 & 18.996 & 3.202 & 17.04\% & -2.376 & 0.0204 & 64.06\% \\
+& Medium (20--30) & 25 & 17.206 & 3.340 & 13.95\% & -0.286 & 0.0180 & 56.00\% \\
+\midrule
+\multirow{2}{*}{LSTM-GS-CV (PM)}
+& Low ($<20$) & 64 & 19.193 & 3.261 & 17.12\% & -2.411 & 0.0226 & 53.12\% \\
+& Medium (20--30) & 25 & 14.600 & 2.986 & 12.34\% & -0.091 & 0.0158 & 48.00\% \\
+\midrule
+\multirow{2}{*}{LSTM-BO}
+& Low ($<20$) & 64 & \textbf{6.708} & \textbf{1.983} & 10.36\% & \textbf{-0.192} & \textbf{0.0091} & 59.38\% \\
+& Medium (20--30) & 25 & 35.736 & 4.970 & 19.98\% & -1.670 & 0.0423 & 48.00\% \\
+\midrule
+\multirow{2}{*}{LSTM-BO (PM)}
+& Low ($<20$) & 64 & 8.332 & 2.087 & 10.88\% & -0.481 & 0.0117 & 60.94\% \\
+& Medium (20--30) & 25 & 37.236 & 5.016 & 20.06\% & -1.782 & 0.0449 & 48.00\% \\
+\midrule
+\multirow{2}{*}{TFT-GS-CV}
+& Low ($<20$) & 64 & 14.133 & 2.843 & 15.02\% & -1.512 & 0.0172 & 46.88\% \\
+& Medium (20--30) & 25 & 14.996 & 3.257 & 13.76\% & -0.121 & 0.0165 & 56.00\% \\
+\midrule
+\multirow{2}{*}{TFT-GS-CV (PM)}
+& Low ($<20$) & 64 & 14.595 & 3.027 & 16.06\% & -1.594 & 0.0183 & 40.62\% \\
+& Medium (20--30) & 25 & 18.877 & 3.588 & 15.03\% & -0.411 & 0.0208 & 52.00\% \\
+\midrule
+\multirow{2}{*}{TFT-BO}
+& Low ($<20$) & 64 & 13.690 & 2.836 & 14.97\% & -1.433 & 0.0167 & 53.12\% \\
+& Medium (20--30) & 25 & 18.113 & 3.738 & 15.95\% & -0.353 & 0.0197 & 44.00\% \\
+\midrule
+\multirow{2}{*}{TFT-BO (PM)}
+& Low ($<20$) & 64 & 13.598 & 2.886 & 15.27\% & -1.416 & 0.0173 & 50.00\% \\
+& Medium (20--30) & 25 & 22.298 & 3.870 & 16.13\% & -0.666 & 0.0262 & 60.00\% \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+%%% LABEL tab:models_h22_regimi_pm
+\begin{table}[H]
+\tiny
+\caption{Out-of-sample forecasting performance by volatility regime at the 22-day horizon, for models with and without Polymarket (PM) features, on the forecast origins common to all specifications. Bold values indicate the best result for each metric within each regime. The high volatility regime contains 2 forecast origins, for which $R^2$ is not reported, and is excluded from the PM comparison in \autoref{fig:heatmap_vol_regimes_pm}. Extended results of \autoref{fig:heatmap_vol_regimes_pm}.}
+\label{tab:models_h22_regimi_pm}
+\setlength{\tabcolsep}{1.1pt}
+\begin{tabular*}{\tblwidth}{@{} L L R R R R R R R @{}}
+\toprule
+\textbf{Model} & \textbf{Volatility regime} & \textbf{N} & \textbf{MSE} & \textbf{MAE} & \textbf{MAPE} & \textbf{$R^2$} & \textbf{QLIKE} & \textbf{DA} \\
+\midrule
+\multirow{3}{*}{HAR}
+& Low ($<20$) & 50 & 20.681 & 3.181 & 13.91\% & -0.404 & 0.0264 & 66.00\% \\
+& Medium (20--30) & 20 & 15.854 & 3.198 & 14.52\% & -0.521 & 0.0196 & 60.00\% \\
+& High ($>30$) & 2 & 12.893 & 2.979 & 17.34\% & -- & 0.0160 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{HAR (PM)}
+& Low ($<20$) & 50 & 7.832 & \textbf{2.027} & \textbf{9.39\%} & 0.468 & 0.0081 & \textbf{84.00\%} \\
+& Medium (20--30) & 20 & 10.570 & 2.853 & 14.34\% & -0.014 & 0.0115 & 90.00\% \\
+& High ($>30$) & 2 & 24.503 & 4.703 & 26.89\% & -- & 0.0281 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{HAR-X}
+& Low ($<20$) & 50 & 15.592 & 3.164 & 15.03\% & -0.059 & 0.0187 & 64.00\% \\
+& Medium (20--30) & 20 & 16.142 & 3.431 & 16.84\% & -0.549 & 0.0173 & 60.00\% \\
+& High ($>30$) & 2 & 76.652 & 7.983 & 45.94\% & -- & 0.0679 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{HAR-X (PM)}
+& Low ($<20$) & 50 & \textbf{7.283} & 2.099 & 10.22\% & \textbf{0.505} & \textbf{0.0079} & 78.00\% \\
+& Medium (20--30) & 20 & \textbf{9.032} & \textbf{2.534} & 13.05\% & \textbf{0.133} & \textbf{0.0100} & \textbf{95.00\%} \\
+& High ($>30$) & 2 & 3.214 & 1.381 & 8.10\% & -- & 0.0047 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-GS-CV}
+& Low ($<20$) & 50 & 25.201 & 4.113 & 20.19\% & -0.711 & 0.0305 & 52.00\% \\
+& Medium (20--30) & 20 & 16.388 & 3.233 & 14.57\% & -0.572 & 0.0205 & 60.00\% \\
+& High ($>30$) & 2 & 1.571 & 1.252 & 7.02\% & -- & 0.0025 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-GS-CV (PM)}
+& Low ($<20$) & 50 & 21.169 & 3.796 & 18.70\% & -0.437 & 0.0248 & 56.00\% \\
+& Medium (20--30) & 20 & 12.396 & 2.882 & 13.27\% & -0.189 & 0.0147 & 65.00\% \\
+& High ($>30$) & 2 & 4.185 & 1.525 & 8.98\% & -- & 0.0059 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-BO}
+& Low ($<20$) & 50 & 25.641 & 4.204 & 20.68\% & -0.741 & 0.0310 & 52.00\% \\
+& Medium (20--30) & 20 & 17.155 & 3.322 & 15.01\% & -0.646 & 0.0217 & 60.00\% \\
+& High ($>30$) & 2 & 1.598 & 1.260 & 7.05\% & -- & 0.0025 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{RF-BO (PM)}
+& Low ($<20$) & 50 & 25.380 & 4.291 & 21.38\% & -0.723 & 0.0301 & 54.00\% \\
+& Medium (20--30) & 20 & 14.442 & 3.028 & 13.78\% & -0.386 & 0.0176 & 65.00\% \\
+& High ($>30$) & 2 & 2.745 & 1.276 & 7.49\% & -- & 0.0040 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{XGBoost-GS-CV}
+& Low ($<20$) & 50 & 22.852 & 3.640 & 17.42\% & -0.552 & 0.0280 & 58.00\% \\
+& Medium (20--30) & 20 & 18.284 & 3.357 & 15.03\% & -0.754 & 0.0234 & 65.00\% \\
+& High ($>30$) & 2 & 1.299 & 0.946 & 5.12\% & -- & 0.0021 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{XGBoost-GS-CV (PM)}
+& Low ($<20$) & 50 & 20.604 & 3.431 & 16.24\% & -0.399 & 0.0250 & 54.00\% \\
+& Medium (20--30) & 20 & 16.488 & 2.967 & \textbf{12.93\%} & -0.582 & 0.0207 & 65.00\% \\
+& High ($>30$) & 2 & 1.020 & 1.010 & 5.67\% & -- & 0.0016 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{XGBoost-BO}
+& Low ($<20$) & 50 & 24.809 & 3.817 & 18.36\% & -0.685 & 0.0307 & 56.00\% \\
+& Medium (20--30) & 20 & 19.110 & 3.395 & 15.11\% & -0.833 & 0.0248 & 65.00\% \\
+& High ($>30$) & 2 & 1.820 & 1.232 & 6.76\% & -- & 0.0029 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{XGBoost-BO (PM)}
+& Low ($<20$) & 50 & 22.174 & 3.572 & 16.93\% & -0.506 & 0.0273 & 54.00\% \\
+& Medium (20--30) & 20 & 18.421 & 3.163 & 13.81\% & -0.767 & 0.0238 & 65.00\% \\
+& High ($>30$) & 2 & 1.088 & 1.034 & 5.77\% & -- & 0.0017 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{LSTM-GS-CV}
+& Low ($<20$) & 50 & 23.352 & 3.580 & 16.39\% & -0.586 & 0.0299 & 58.00\% \\
+& Medium (20--30) & 20 & 24.894 & 3.767 & 16.64\% & -1.388 & 0.0350 & 65.00\% \\
+& High ($>30$) & 2 & 3.404 & 1.750 & 9.66\% & -- & 0.0057 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{LSTM-GS-CV (PM)}
+& Low ($<20$) & 50 & 23.580 & 3.737 & 17.25\% & -0.601 & 0.0296 & 60.00\% \\
+& Medium (20--30) & 20 & 17.426 & 3.160 & 14.06\% & -0.672 & 0.0238 & 65.00\% \\
+& High ($>30$) & 2 & 2.935 & 1.414 & 7.65\% & -- & 0.0050 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{LSTM-BO}
+& Low ($<20$) & 50 & 27.224 & 3.871 & 17.64\% & -0.849 & 0.0369 & 50.00\% \\
+& Medium (20--30) & 20 & 21.654 & 3.479 & 15.31\% & -1.078 & 0.0296 & 65.00\% \\
+& High ($>30$) & 2 & 4.101 & 2.025 & 11.39\% & -- & 0.0064 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{LSTM-BO (PM)}
+& Low ($<20$) & 50 & 24.130 & 3.699 & 17.18\% & -0.638 & 0.0311 & 62.00\% \\
+& Medium (20--30) & 20 & 22.022 & 3.624 & 16.08\% & -1.113 & 0.0303 & 65.00\% \\
+& High ($>30$) & 2 & 3.194 & 1.439 & 7.76\% & -- & 0.0055 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-GS-CV}
+& Low ($<20$) & 50 & 39.069 & 5.171 & 25.60\% & -1.653 & 0.0486 & 36.00\% \\
+& Medium (20--30) & 20 & 25.668 & 3.759 & 16.44\% & -1.463 & 0.0364 & 65.00\% \\
+& High ($>30$) & 2 & 1.359 & 1.009 & 5.50\% & -- & 0.0022 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-GS-CV (PM)}
+& Low ($<20$) & 50 & 38.315 & 5.219 & 25.39\% & -1.602 & 0.0520 & 28.00\% \\
+& Medium (20--30) & 20 & 27.622 & 4.079 & 18.15\% & -1.650 & 0.0398 & 65.00\% \\
+& High ($>30$) & 2 & \textbf{0.121} & \textbf{0.337} & \textbf{1.87\%} & -- & \textbf{0.0002} & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-BO}
+& Low ($<20$) & 50 & 32.924 & 4.596 & 21.98\% & -1.236 & 0.0420 & 54.00\% \\
+& Medium (20--30) & 20 & 26.045 & 3.828 & 16.77\% & -1.499 & 0.0372 & 65.00\% \\
+& High ($>30$) & 2 & 2.721 & 1.334 & 7.20\% & -- & 0.0046 & \textbf{100.00\%} \\
+\midrule
+\multirow{3}{*}{TFT-BO (PM)}
+& Low ($<20$) & 50 & 33.411 & 4.541 & 21.45\% & -1.269 & 0.0458 & 38.00\% \\
+& Medium (20--30) & 20 & 27.358 & 4.094 & 18.26\% & -1.625 & 0.0393 & 65.00\% \\
+& High ($>30$) & 2 & 4.027 & 2.005 & 11.24\% & -- & 0.0064 & \textbf{100.00\%} \\
+\bottomrule
+\end{tabular*}
+\end{table}
+

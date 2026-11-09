@@ -1,4 +1,7 @@
 import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
+import os
 import time
 import random
 import numpy as np
@@ -30,7 +33,7 @@ device = "cpu"
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Data\Clean\dataset.csv", index_col=["Date"])
+dataset = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Data\Clean\dataset.csv"), index_col=["Date"])
 
 
 # -----------------
@@ -418,7 +421,7 @@ y_true_backtest_cv = pd.Series(
 y_vix_origin_cv = pd.Series(vix_origin_list_cv, index=dates_predicted_cv, name="VIX_Origin")
 
 # Common folder where results are saved
-output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
+output_dir = os.path.join(REPO_DIR, r"5_Forecasts_&_Error_Metrics\Normale\Deep_Learning")
 os.makedirs(output_dir, exist_ok=True)
 
 df_out_cv = pd.DataFrame({
@@ -554,7 +557,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
 fig.autofmt_xdate(rotation=45)
 
-output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\Normale\Deep_Learning"
+output_dir_grafici = os.path.join(REPO_DIR, r"5_Forecasts_&_Error_Metrics\Normale\Deep_Learning")
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"Actual VIX vs Forecast VIX (Test Set) with Grid Search CV hyperparameter optimization h = {orizzonte}")

@@ -1,4 +1,7 @@
 import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
+import os
 import pandas as pd
 import numpy as np
 np.int = int # needed to allow skopt to work
@@ -21,7 +24,7 @@ from sklearn.model_selection import GridSearchCV, PredefinedSplit, ParameterGrid
 # ---------------
 # IMPORT DATASET
 # ---------------
-dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\dataset_w_polymarket.csv", index_col=["Date"])
+dataset = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Polymarket_data\dataset_w_polymarket.csv"), index_col=["Date"])
 
 
 # -----------------
@@ -34,10 +37,10 @@ dataset.index = pd.to_datetime(
 )
 
 # Forecast horizon 1, 5 and 22 days
-orizzonte = 22 # Change manually for each run
+orizzonte = int(sys.argv[1]) if len(sys.argv) > 1 else 22 # 1, 5 or 22, from the command line
 
 # With or without PM
-evento = "with_PM" # Change when using Polymarket features in "with_PM"
+evento = sys.argv[2] if len(sys.argv) > 2 else "con_PM" # "con_PM" or "senza_PM", from the command line
 
 # Create target shifted forward by h days (direct multi-step forecasting)
 target_col = f"Close_VIX_h{orizzonte}"
@@ -72,7 +75,7 @@ target = [target_col] # Dependent variable
 dataset_h = dataset.dropna(subset=predittori_w_pm + [target_col]) # change to predittori_w_pm when using PM features
 
 # Split matrices into training, validation and test sets
-X = dataset_h[predittori_w_pm] # change to predittori_w_pm when using PM features
+X = dataset_h[predittori_w_pm if evento == "con_PM" else predittori] # same matched sample in both cases
 y = dataset_h[target_col]
 
 n_observations = len(X)
@@ -331,7 +334,7 @@ print(f"{ranking_boruta_bo.sort_values('Rank')}")
 # ----------------------------------------------------------------------------
 # Feature selection from MDI after Grid Search CV
 ranked_features_cv = importance_mdi_cv["Variable"].tolist()
-feature_sizes_cv = list(range(17, 4, -1)) # 17 = least important feature
+feature_sizes_cv = list(range(len(predittori), 4, -1))
 
 results_features_cv = []
 
@@ -384,7 +387,7 @@ print(best_features_cv)
 
 # Feature selection from MDI after Bayesian Optimization
 ranked_features_bo = importance_mdi_bo["Variable"].tolist()
-feature_sizes_bo = list(range(17, 4, -1))
+feature_sizes_bo = list(range(len(predittori), 4, -1))
 
 results_features_bo = []
 
@@ -489,7 +492,7 @@ y_true_backtest_cv = pd.Series(
 )
 
 # Shared folder where all model files save their results
-output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning"
+output_dir = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}")
 os.makedirs(output_dir, exist_ok=True)
 
 # Save actual and forecast values for the Grid-Search variant so Model Confidence Set and Diebold-Mariano tests can be run later
@@ -613,7 +616,7 @@ ax.xaxis.set_major_locator(mdates.MonthLocator(interval=1))   # one tick every m
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))   # format like "Gen 2022"
 fig.autofmt_xdate(rotation=45)                                # rotate the labels to prevent overlapping
 
-output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning"
+output_dir_grafici = os.path.join(REPO_DIR, rf"5_Forecasts_&_Error_Metrics\With_Polymarket\Machine_Learning\h{orizzonte}")
 os.makedirs(output_dir_grafici, exist_ok=True)
 
 ax.set_title(f"Actual VIX vs Predicted VIX (Test Set) with Hyperparameter Optimization via Grid Search CV h = {orizzonte}, {evento}")

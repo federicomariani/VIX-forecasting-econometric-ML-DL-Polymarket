@@ -1,4 +1,7 @@
 import os
+import sys
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")) # repo root
+import os
 import time
 import random
 import numpy as np
@@ -128,7 +131,7 @@ if __name__ == "__main__":
     # ---------------
     # IMPORT DATASET
     # ---------------
-    dataset = pd.read_csv(r"C:\Users\fede1\Desktop\Repo\0_Dataset\Polymarket_data\dataset_w_polymarket.csv")
+    dataset = pd.read_csv(os.path.join(REPO_DIR, r"0_Dataset\Polymarket_data\dataset_w_polymarket.csv"))
     dataset["Date"] = pd.to_datetime(dataset["Date"])
     dataset = dataset.sort_values("Date").reset_index(drop=True)    
     
@@ -739,7 +742,7 @@ if __name__ == "__main__":
     ]   
     y_true_backtest_cv.index = y_predicted_backtest_cv.index
     y_true_backtest_cv = y_true_backtest_cv.rename("VIX_Actual")
-    output_dir = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning"
+    output_dir = os.path.join(REPO_DIR, r"5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning")
     os.makedirs(output_dir, exist_ok=True)
     
     df_out_cv = pd.DataFrame({"Actual": y_true_backtest_cv, "Forecast": y_predicted_backtest_cv})
@@ -891,7 +894,7 @@ if __name__ == "__main__":
     # ------------------------------------
     # PLOTS: ACTUAL VIX VS FORECASTED VIX
     # ------------------------------------
-    output_dir_grafici = r"C:\Users\fede1\Desktop\Repo\5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning"
+    output_dir_grafici = os.path.join(REPO_DIR, r"5_Forecasts_&_Error_Metrics\With_Polymarket\Deep_Learning")
     os.makedirs(output_dir_grafici, exist_ok=True)
     
     fig, ax = plt.subplots(figsize=(14, 6))
