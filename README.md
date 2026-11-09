@@ -1,8 +1,9 @@
-# Forecasting the VIX Index: A Multi-Horizon Benchmark Across Econometric, Machine Learning and Deep Learning Models with Prediction Market Signals
+# Forecasting the VIX Index through Machine Learning
 
 ## Authors
 - Federico Mariani
 - Andrea Bucci
+- Emanuela Giacomini
 - Luca Romeo
 
 ## Abstract
