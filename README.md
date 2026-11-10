@@ -1,4 +1,4 @@
-# Forecasting the VIX Index through Machine Learning
+# Forecasting the VIX: Do Machine Learning and Prediction Market Signals Improve Predictive Accuracy?
 
 ## Authors
 - Federico Mariani
